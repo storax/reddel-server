@@ -1,0 +1,16 @@
+[paths]
+source =
+   src/reddel_server
+   */site-packages/reddel_server
+
+[run]
+branch = true
+source =
+    reddel_server
+    tests
+parallel = true
+
+[report]
+show_missing = true
+precision = 2
+omit = *migrations*
