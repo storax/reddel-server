@@ -1,23 +1,28 @@
 """
 Module that contains the command line app.
-
-Why does this file exist, and why not put this in __main__?
-
-  You might be tempted to import things from __main__ later, but that will cause
-  problems: the code will get executed twice:
-
-  - When you run `python -mreddel_server` python will execute
-    ``__main__.py`` as a script. That means there won't be any
-    ``reddel_server.__main__`` in ``sys.modules``.
-  - When you import __main__ it will get executed again (as a module) because
-    there's no ``reddel_server.__main__`` in ``sys.modules``.
-
-  Also see (1) from http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 import click
+import click_log
+
+import reddel_server
+from reddel_server import utils
 
 
 @click.command()
-@click.argument('names', nargs=-1)
-def main(names):
-    click.echo(repr(names))
+@click.option('--address', type=str, default='localhost', help="address to bind the server to")
+@click.option('--port', type=int, default=0, help="address to bind the server to")
+@click.option('--provider', '-p', type=str, multiple=True, help="dotted path to a provider class")
+@click_log.simple_verbosity_option()
+def main(address, port, provider):
+    server = reddel_server.Server((address, port))
+    provider = provider + ('reddel_server.RedBaronProvider', 'reddel_server.Provider')
+    providers = []
+    for p in provider:
+        providercls = utils.get_attr_from_dotted_path(p)
+        providers.append(providercls(server))
+    chainedprovider = reddel_server.ChainedProvider(server, providers=providers)
+    server.register_instance(chainedprovider)
+    click_log.init(server.logger)
+    server.print_port()
+    server.serve_forever()
+    server.logger.info("server shutdown")
