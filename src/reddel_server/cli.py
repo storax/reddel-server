@@ -21,7 +21,7 @@ def main(address, port, provider):
         providercls = utils.get_attr_from_dotted_path(p)
         providers.append(providercls(server))
     chainedprovider = reddel_server.ChainedProvider(server, providers=providers)
-    server.register_instance(chainedprovider)
+    server.provider = chainedprovider
     click_log.init(server.logger)
     server.print_port()
     server.serve_forever()

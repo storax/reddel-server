@@ -26,7 +26,15 @@ class Server(epc.server.EPCServer):
         :raises: None
         """
         super(Server, self).__init__(server_address, RequestHandlerClass=RequestHandlerClass, log_traceback=True)
+        self._provider = None
+        self._set_funcs()
+
+    def _set_funcs(self):
+        self.funcs = {}
         self.register_function(self.set_logging_level)
+        if self.provider:
+            for name, f in self.provider._get_methods().items():
+                self.register_function(f, name=name)
 
     def set_logging_level(self, level):
         """Set logging level
@@ -47,3 +55,13 @@ class Server(epc.server.EPCServer):
             except KeyError:
                 raise ValueError("Invalid logging level %s" % level)
         self.logger.setLevel(level)
+
+    @property
+    def provider(self):
+        """The :class:`reddel_server.Provider` instance that provides methods."""
+        return self._provider
+
+    @provider.setter
+    def provider(self, provider):
+        self._provider = provider
+        self._set_funcs()

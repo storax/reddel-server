@@ -1,6 +1,9 @@
 """Provide functionality to reddel"""
 import functools
+import types
+
 import redbaron
+
 from reddel_server import utils
 
 __all__ = ["ProviderBase", "Provider", "ChainedProvider", "RedBaronProvider"]
@@ -26,14 +29,18 @@ class ProviderBase(object):
     def log(self):
         return self._server.logger
 
+    def _get_methods(self):
+        """Return a dictionary of all methods provided."""
+        d = {}
+        for attrname in dir(self):
+            attr = getattr(self, attrname)
+            if not attrname.startswith('_') and isinstance(attr, types.MethodType):
+                d[attrname] = attr
+        return d
+
     def list_methods(self):
         """Return a list of methods"""
-        l = []
-        for attr in dir(self):
-            if not attr.startswith('_') and callable(getattr(self, attr)):
-                l.append(attr)
-        self.log.error('%s', l)
-        return l
+        return self._get_methods().keys()
 
     def _get_method(self, name):
         return getattr(self, name)
@@ -45,7 +52,6 @@ class ProviderBase(object):
         :type name: :class:`str`
         """
         method = getattr(self, name)
-        self.log.error(method.__doc__)
         return method.__doc__
 
 
@@ -92,12 +98,7 @@ class ChainedProvider(ProviderBase):
         :type name: :class:`str`
         :returns: the method
         """
-        if not hasattr(self, name):
-            for provider in self._providers:
-                method = getattr(provider, name, None)
-                if callable(method):
-                    return method
-        return getattr(self, name)
+        return self._get_methods()[name]
 
     def add_provider(self, dotted_path):
         """Add a new provider
@@ -107,14 +108,14 @@ class ChainedProvider(ProviderBase):
         """
         providercls = utils.get_attr_from_dotted_path(dotted_path)
         self._providers = self._providers.insert(0, providercls(self.server))
+        self.server.provider = self
 
-    def list_methods(self):
-        """Return a list of methods"""
-        l = set([])
-        for p in self._providers:
-            l.update(p.list_methods())
-        l.update(super(ChainedProvider, self).list_methods())
-        return list(l)
+    def _get_methods(self):
+        """Return all methods provided."""
+        d = super(ChainedProvider, self)._get_methods()
+        for p in reversed(self._providers):
+            d.update(p._get_methods())
+        return d
 
 
 def red_src(dump=True):
