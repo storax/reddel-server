@@ -3,9 +3,10 @@ Contains the main EPC server class.
 """
 import logging
 
-import six
 import epc.handler
 import epc.server
+import six
+
 
 __all__ = ['Server']
 
@@ -38,8 +39,7 @@ class Server(epc.server.EPCServer):
                        "INFO": logging.INFO,
                        "WARNING": logging.WARNING,
                        "ERROR": logging.ERROR,
-                       "CRITICAL": logging.CRITICAL
-            }
+                       "CRITICAL": logging.CRITICAL}
             try:
                 level = mapping[level]
             except KeyError:

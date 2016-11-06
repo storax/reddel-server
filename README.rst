@@ -25,7 +25,7 @@ Overview
 
 .. |coveralls| image:: https://coveralls.io/repos/storax/reddel-server/badge.svg?branch=master&service=github
     :alt: Coverage Status
-    :target: https://coveralls.io/r/storax/reddel-server
+    :target: https://coveralls.io/github/storax/reddel-server
 
 .. |version| image:: https://img.shields.io/pypi/v/reddel-server.svg?style=flat
     :alt: PyPI Package latest release

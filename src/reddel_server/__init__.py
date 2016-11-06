@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from .server import *
 from .provider import *
+from .server import *
 
 __all__ = [server.__all__, provider.__all__]
 
