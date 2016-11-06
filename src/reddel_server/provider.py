@@ -1,12 +1,71 @@
 """Provide functionality to reddel"""
+from __future__ import absolute_import
+
 import functools
 import types
 
 import redbaron
 
-from reddel_server import utils
+from . import exceptions, utils, validators
 
 __all__ = ["ProviderBase", "Provider", "ChainedProvider", "RedBaronProvider"]
+
+
+_RED_FUNC_ATTRS = ['validators', 'red']
+
+
+def redwraps(towrap):
+    """Use this when creating decorators instead of :func:`functools.wraps`"""
+    def redwraps_dec(func):
+        wrapped = functools.wraps(towrap)(func)
+        for attr in _RED_FUNC_ATTRS:
+            val = getattr(towrap, attr, None)
+            setattr(wrapped, attr, val)
+        return wrapped
+    return redwraps_dec
+
+
+def red_src(dump=True):
+    """Create decorator that converts the first arg into a red baron src
+
+    :param dump: if True, dump the return value from the wrapped function.
+                 Expectes the return type to be a :class:`redbaron.RedBaron` object.
+    :type dump: :class:`boolean`
+    """
+    def red_src_dec(func):
+        @redwraps(func)
+        def wrapped(self, src, *args, **kwargs):
+            red = redbaron.RedBaron(src)
+            retval = func(self, red, *args, **kwargs)
+            if dump and retval:
+                retval = retval.dumps()
+            return retval
+        return wrapped
+    return red_src_dec
+
+
+def red_type(identifier, single=True):
+    """Create decorator that checks if the root is identified by identifier
+
+    :param identifier: red baron node identifiers
+    :type identifier: :class:`str`
+    :param single: expect a single node in the initial node list. Pass on the first node.
+    :type single: :class:`bool`
+    """
+    def red_type_dec(func):
+        validator = validators.BaronTypeValidator([identifier], single=single)
+
+        @redwraps(func)
+        def wrapped(self, red, *args, **kwargs):
+            validator(red)
+            if single:
+                red = red[0]
+            return func(self, red, *args, **kwargs)
+
+        wrapped.validators = wrapped.validators or []
+        wrapped.validators.append(validator)
+        return wrapped
+    return red_type_dec
 
 
 class ProviderBase(object):
@@ -21,6 +80,9 @@ class ProviderBase(object):
         super(ProviderBase, self).__init__()
         self._server = server
 
+    def __repr__(self):
+        return "{classname}()".format(classname=self.__class__.__name__)
+
     @property
     def server(self):
         return self._server
@@ -29,18 +91,39 @@ class ProviderBase(object):
     def log(self):
         return self._server.logger
 
-    def _get_methods(self):
-        """Return a dictionary of all methods provided."""
+    def _get_methods(self, src=None):
+        """Return a dictionary of all methods provided.
+
+        :param source: if src return only compatible methods
+        :type source: :class:`str`
+        :returns: dict method names and methods
+        """
+        if src:
+            red = redbaron.RedBaron(src)
         d = {}
         for attrname in dir(self):
             attr = getattr(self, attrname)
             if not attrname.startswith('_') and isinstance(attr, types.MethodType):
-                d[attrname] = attr
+                if src and hasattr(attr, 'validators'):
+                    for v in (attr.validators or []):
+                        try:
+                            v(red)
+                        except exceptions.ValidationError:
+                            break
+                    else:
+                        d[attrname] = attr
+                else:
+                    d[attrname] = attr
         return d
 
-    def list_methods(self):
-        """Return a list of methods"""
-        return self._get_methods().keys()
+    def list_methods(self, src=None):
+        """Return a list of methods
+
+        :param source: if src return only compatible methods
+        :type source: :class:`str`
+        :returns: list of :class:`str`
+        """
+        return list(self._get_methods(src=src).keys())
 
     def _get_method(self, name):
         return getattr(self, name)
@@ -110,56 +193,17 @@ class ChainedProvider(ProviderBase):
         self._providers = self._providers.insert(0, providercls(self.server))
         self.server.provider = self
 
-    def _get_methods(self):
-        """Return all methods provided."""
-        d = super(ChainedProvider, self)._get_methods()
+    def _get_methods(self, src=None):
+        """Return all methods provided.
+
+        :param source: if src return only compatible methods
+        :type source: :class:`str`
+        :returns: dict method names and methods
+        """
+        d = super(ChainedProvider, self)._get_methods(src=src)
         for p in reversed(self._providers):
-            d.update(p._get_methods())
+            d.update(p._get_methods(src=src))
         return d
-
-
-def red_src(dump=True):
-    """Create decorator that converts the first arg into a red baron src
-
-    :param dump: if True, dump the return value from the wrapped function.
-                 Expectes the return type to be a :class:`redbaron.RedBaron` object.
-    :type dump: :class:`boolean`
-    """
-    def red_src_dec(func):
-        @functools.wraps(func)
-        def wrapped(self, src, *args, **kwargs):
-            red = redbaron.RedBaron(src)
-            retval = func(self, red, *args, **kwargs)
-            if dump and retval:
-                retval = retval.dumps()
-            return retval
-        return wrapped
-    return red_src_dec
-
-
-def red_type(identifier, single=True):
-    """Create decorator that checks if the root is identified by identifier
-
-    :param identifier: red baron node identifiers
-    :type identifier: :class:`str`
-    :param single: expect a single node in the initial node list. Pass on the first node.
-    :type single: :class:`bool`
-    """
-    def red_type_dec(func):
-        @functools.wraps(func)
-        def wrapped(self, red, *args, **kwargs):
-            for node in red:
-                identifiers = node.generate_identifiers()
-                if identifier not in identifiers:
-                    raise ValueError("Expected identifier %s but got %s" % (identifier, identifiers))
-            if single:
-                count = len(red)
-                if count != 1:
-                    raise ValueError("Expected a single node but got %s" % count)
-                red = red[0]
-            return func(self, red, *args, **kwargs)
-        return wrapped
-    return red_type_dec
 
 
 class RedBaronProvider(ProviderBase):
