@@ -6,7 +6,9 @@ import types
 
 import redbaron
 
-from . import exceptions, utils, validators
+from . import exceptions
+from . import utils
+from . import validators
 
 __all__ = ['ProviderBase', 'Provider', 'ChainedProvider', 'RedBaronProvider',
            'redwraps', 'red_src', 'red_type', 'red_validate']
