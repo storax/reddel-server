@@ -17,7 +17,7 @@ class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
     Override :meth:`ValidatorInterface.__call__`.
     """
     @abc.abstractmethod
-    def __call__(self, red):
+    def __call__(self, red):  # pragma: no cover
         """Validate the given redbaron source
 
         :param red: the source
@@ -26,7 +26,7 @@ class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
         """
         pass
 
-    def transform(self, red):
+    def transform(self, red):  # pragma: no cover
         """Transform the given red baron
 
         :param red: a red baron or other nodes
