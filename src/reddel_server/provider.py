@@ -43,8 +43,6 @@ class ProviderBase(object):
 
         :param name: the name of the method.
         :type name: :class:`str`
-
-        asdfasdf
         """
         method = getattr(self, name)
         self.log.error(method.__doc__)
@@ -164,6 +162,42 @@ def red_type(identifier, single=True):
 
 
 class RedBaronProvider(ProviderBase):
+    @red_src(dump=False)
+    def analyze(self, red, deep=2, with_formatting=False):
+        return "\n".join(red.__help__(deep=deep, with_formatting=False))
+
+    @red_src()
+    @red_type("def")
+    def rename_arg(self, red, oldname, newname):
+        for arg in red.arguments:
+            if arg.target.value == oldname:
+                arg.target.value = newname
+                break
+        else:
+            raise ValueError("Expected argument %s to be one of %s"
+                             % (oldname, [arg.target.value for arg in red.arguments]))
+        namenodes = red.value.find_all("name", value=oldname)
+        for node in namenodes:
+            node.value = newname
+        return red
+
+    @red_src(dump=False)
+    @red_type("def")
+    def get_args(self, red):
+        """Return a list of args."""
+        args = []
+        for arg in red.arguments:
+            if isinstance(arg, (redbaron.ListArgumentNode, redbaron.DictArgumentNode)):
+                args.append((arg.dumps(), None))
+                continue
+            target = arg.target.value
+            if arg.value:
+                value = arg.value.dumps()
+            else:
+                value = None
+            args.append((target, value))
+        return args
+
     @red_src()
     @red_type("def")
     def add_arg(self, red, index, arg):
