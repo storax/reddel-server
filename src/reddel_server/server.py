@@ -14,6 +14,8 @@ __all__ = ['Server']
 class Server(epc.server.EPCServer):
     """EPCServer that provides basic functionality.
     """
+    allow_reuse_address = True
+
     def __init__(self, server_address=('localhost', 0), RequestHandlerClass=epc.handler.EPCHandler):
         """Init server with the given handler.
 
@@ -23,7 +25,7 @@ class Server(epc.server.EPCServer):
         :type RequestHandlerClass: :class:`epc.handler.EPCHandler`
         :raises: None
         """
-        super(Server, self).__init__(server_address, RequestHandlerClass, log_traceback=True)
+        super(Server, self).__init__(server_address, RequestHandlerClass=RequestHandlerClass, log_traceback=True)
         self.register_function(self.set_logging_level)
 
     def set_logging_level(self, level):
