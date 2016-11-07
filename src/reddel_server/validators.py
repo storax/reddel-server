@@ -22,7 +22,7 @@ class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
 
         :param red: the source
         :type red: :class:`redbaron.RedBaron`
-        :raises: :class:`ValidationError`
+        :raises: :class:`ValidationError <reddel_server.ValidationError>`
         """
         pass
 
@@ -44,7 +44,7 @@ class BaronTypeValidator(ValidatorInterface):
         :param identifiers: allowed identifiers for the redbaron source
         :type identifiers: sequence of :class:`str`
         :param single: If more than one top level node is valid
-        :type single: :class:`boolean`
+        :type single: :class:`bool`
         """
         self.identifiers = identifiers
         self.single = single
@@ -52,7 +52,7 @@ class BaronTypeValidator(ValidatorInterface):
     def __call__(self, red):
         """Validate the given redbaron source
 
-        :raises: :class:`ValidationError`
+        :raises: :class:`ValidationError <reddel_server.ValidationError`
         """
         if self.single:
             count = len(red)

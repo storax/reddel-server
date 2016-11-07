@@ -11,6 +11,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.extlinks',
     'sphinx.ext.ifconfig',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
@@ -51,3 +52,7 @@ html_short_title = '%s-%s' % (project, version)
 napoleon_use_ivar = True
 napoleon_use_rtype = False
 napoleon_use_param = False
+
+intersphinx_mapping = {'python': ('https://docs.python.org/3/', None),
+                       'redbaron': ('http://redbaron.readthedocs.io/en/latest/', None),
+                       'epc': ('http://python-epc.readthedocs.io/en/latest/', None)}

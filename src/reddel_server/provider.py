@@ -24,9 +24,9 @@ def redwraps(towrap):
     On top of that uses :func:`functools.wraps`.
 
     :param towrap: the function to wrap
-    :type towrap: function
+    :type towrap: :data:`types.FunctionType`
     :returns: the decorator
-    :rtype: function
+    :rtype: :data:`types.FunctionType`
     """
     def redwraps_dec(func):
         wrapped = functools.wraps(towrap)(func)
@@ -42,9 +42,9 @@ def red_src(dump=True):
 
     :param dump: if True, dump the return value from the wrapped function.
                  Expectes the return type to be a :class:`redbaron.RedBaron` object.
-    :type dump: :class:`boolean`
+    :type dump: :class:`bool`
     :returns: the decorator
-    :rtype: function
+    :rtype: :data:`types.FunctionType`
     """
     def red_src_dec(func):
         @redwraps(func)
@@ -86,7 +86,7 @@ def red_type(identifiers, single=True):
     :param single: expect a single node in the initial node list. Pass on the first node.
     :type single: :class:`bool`
     :returns: the decorator
-    :rtype: functions
+    :rtype: :data:`types.FunctionType`
     """
     return red_validate([validators.BaronTypeValidator(identifiers, single=single)])
 

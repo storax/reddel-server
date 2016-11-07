@@ -39,8 +39,8 @@ class Server(epc.server.EPCServer):
     def set_logging_level(self, level):
         """Set logging level
 
-        :param level: either "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL" or integer
-        :type level: :class:`str`|:class:`int`
+        :param level: either ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL`` or integer
+        :type level: :class:`str` | :class:`int`
         :returns: None
         :raises: None
         """
