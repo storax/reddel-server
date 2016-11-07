@@ -14,7 +14,7 @@ __all__ = ['ProviderBase', 'Provider', 'ChainedProvider', 'RedBaronProvider',
            'redwraps', 'red_src', 'red_type', 'red_validate']
 
 
-_RED_FUNC_ATTRS = ['validators', 'red']
+_RED_FUNC_ATTRS = ['red', 'validators']
 
 
 def redwraps(towrap):
