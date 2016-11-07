@@ -1,8 +1,8 @@
 """Collection of exceptions
 """
 
-__all__ = ['ValidationError']
+__all__ = ['ValidationException']
 
 
-class ValidationError(Exception):
+class ValidationException(Exception):
     pass

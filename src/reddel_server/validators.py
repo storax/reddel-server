@@ -22,7 +22,7 @@ class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
 
         :param red: the source
         :type red: :class:`redbaron.RedBaron`
-        :raises: :class:`ValidationError <reddel_server.ValidationError>`
+        :raises: :class:`ValidationException <reddel_server.ValidationException>`
         """
         pass
 
@@ -52,16 +52,16 @@ class BaronTypeValidator(ValidatorInterface):
     def __call__(self, red):
         """Validate the given redbaron source
 
-        :raises: :class:`ValidationError <reddel_server.ValidationError`
+        :raises: :class:`ValidationException <reddel_server.ValidationException`
         """
         if self.single:
             count = len(red)
             if count != 1:
-                raise exceptions.ValidationError("Expected a single node but got %s" % count)
+                raise exceptions.ValidationException("Expected a single node but got %s" % count)
         for node in red:
             identifiers = node.generate_identifiers()
             if not any(i in identifiers for i in self.identifiers):
-                raise exceptions.ValidationError("Expected identifier %s but got %s" %
+                raise exceptions.ValidationException("Expected identifier %s but got %s" %
                                                  (self.identifiers, identifiers))
 
     def transform(self, red):

@@ -69,7 +69,7 @@ def red_validate(validators):
         def wrapped(self, red, *args, **kwargs):
             transformed = red
             for v in validators:
-                v(red)
+                v(transformed)
                 transformed = v.transform(transformed)
             return func(self, transformed, *args, **kwargs)
         wrapped.validators = wrapped.validators or []
@@ -131,7 +131,7 @@ class ProviderBase(object):
                     for v in (attr.validators or []):
                         try:
                             v(red)
-                        except exceptions.ValidationError:
+                        except exceptions.ValidationException:
                             break
                     else:
                         d[attrname] = attr
@@ -230,6 +230,8 @@ class ChainedProvider(ProviderBase):
 
 
 class RedBaronProvider(ProviderBase):
+    """Provider for transforming source code via redbaron."""
+
     @red_src(dump=False)
     def analyze(self, red, deep=2, with_formatting=False):
         return "\n".join(red.__help__(deep=deep, with_formatting=False))
