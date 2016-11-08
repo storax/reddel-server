@@ -26,7 +26,7 @@ def test_barontype_call(identifiers, single, src, valid):
     if valid:
         val(red)
     else:
-        with pytest.raises(reddel_server.ValidationError):
+        with pytest.raises(reddel_server.ValidationException):
             val(red)
 
 def test_barontype_transform_single():

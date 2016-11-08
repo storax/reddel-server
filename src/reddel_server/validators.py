@@ -62,7 +62,7 @@ class BaronTypeValidator(ValidatorInterface):
             identifiers = node.generate_identifiers()
             if not any(i in identifiers for i in self.identifiers):
                 raise exceptions.ValidationException("Expected identifier %s but got %s" %
-                                                 (self.identifiers, identifiers))
+                                                     (self.identifiers, identifiers))
 
     def transform(self, red):
         """If :data:`BaronTypeValidator.single` is True return the first node."""

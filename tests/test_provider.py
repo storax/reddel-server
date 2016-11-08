@@ -85,7 +85,7 @@ def test_red_validate_invalid():
         pass  # pragma: nocover
 
     src = redbaron.RedBaron("1+1")
-    with pytest.raises(reddel_server.ValidationError):
+    with pytest.raises(reddel_server.ValidationException):
         foo(None, src)
 
 
