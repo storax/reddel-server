@@ -123,8 +123,22 @@ A executable ``reddel`` is provided by this project, which should suitable for m
     * - ``--help``
       - Show the help message and exit.
 
-If you need advanced features check the `reference guide <reference/index>`_ for help
-on how to write your own server.
+Calling a function from within Emacs is very simple thanks to `epc <https://github.com/kiwanami/emacs-epc>`_::
+
+    >>> (progn
+    ...   (require 'epc)
+    ...   (defvar my-epc (epc:start-epc "reddel" nil))
+    ...   ;; list all methods compatible with the given source
+    ...   (message (epc:call-sync my-epc 'list_methods '("def foo(arg1, arg3): pass"))))
+
+``(epc:start-epc "reddel" nil)`` starts the server by executing ``reddel`` without any arguments (``nil``).
+Then you can make calls to that server by referring to the manager returned from ``epc:start-epc``.
+To execute a call, you can use ``(epc:call-sync <manager> <method> <arguments>)``,
+where ``<manager>`` is the manager returned by ``epc:start-epc``, ``<method>`` is the function
+and ``<arguments>`` is a list of arguments passed to ``<method>``.
+
+The Builtin Functions section in the documentation provides a guide through all functions that ship with this package.
+If you need advanced features check the reference documentation for help on how to write your own server.
 
 Documentation
 =============
