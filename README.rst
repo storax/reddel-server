@@ -10,11 +10,11 @@ Reddel-Server
 - |travis| |coveralls|
 - |version| |downloads| |wheel| |supported-versions| |supported-implementations|
 
-.. |fork| image:: https://img.shields.io/github/forks/badges/shields.svg?style=social&label=Fork
+.. |fork| image:: https://img.shields.io/github/forks/storax/reddel-server.svg?style=social&label=Fork
     :alt: Github Forks
     :target: https://github.com/storax/reddel-server/network
 
-.. |stars| image:: https://img.shields.io/github/stars/badges/shields.svg?style=social&label=Star
+.. |stars| image:: https://img.shields.io/github/stars/storax/reddel-server.svg?style=social&label=Star
     :alt: Github Stars
     :target: https://github.com/storax/reddel-server/stargazers
 
