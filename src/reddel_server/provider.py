@@ -105,7 +105,7 @@ class ProviderBase(object):
         self._server = server
 
     def __str__(self):
-        return "{classname}()".format(classname=self.__class__.__name__)
+        return "<{classname} at {memloc}>".format(classname=self.__class__.__name__, memloc=hex(id(self)))
 
     def __repr__(self):
         return "{classname}({server!r})".format(classname=self.__class__.__name__,

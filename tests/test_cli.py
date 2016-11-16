@@ -18,3 +18,23 @@ def test_main(mock_server):
     assert reddel_server.Server.print_port.call_count == 1
     assert reddel_server.Server.serve_forever.call_count == 1
     assert result.exit_code == 0
+
+
+def test_main_redbaseexception(mock_server):
+    """Check that we exit with 1 if a RedBaseException occurs."""
+    runner = CliRunner()
+    result = runner.invoke(cli.main, ["-p" "asdf"])
+    assert "Traceback (most recent call last)" not in result.output, (
+        "RedBaseExceptions should only get logged"
+        "and the traceback should only be shown if the debug flag is set."
+    )
+    assert "Expected a dotted path (e.g. 'mypkg.mymod.MyClass') but got 'asdf'" in result.output
+    assert result.exit_code == 1
+
+
+def test_main_redbaseexception_debug(mock_server):
+    """Check that the traceback is logged with the debug flag."""
+    runner = CliRunner()
+    result = runner.invoke(cli.main, ["-p" "asdf", "--debug"])
+    assert "Traceback (most recent call last)" in result.output
+    assert result.exit_code == 1

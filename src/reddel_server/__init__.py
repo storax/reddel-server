@@ -1,6 +1,7 @@
 """The ``reddel_server`` package provides the complete supported API.
 
-.. note:: It is not recommended to import any submodules as they are considered protected and might change.
+.. note:: It is not recommended to import any submodules as they are considered protected and
+          might get breaking changes between minor and patch versions.
 
 The API is devided into multiple domains:
 

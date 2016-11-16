@@ -156,7 +156,7 @@ def test_ProviderBase_repr(server):
 
 def test_ProviderBase_str(server):
     pb = provider.ProviderBase(server)
-    assert str(pb) == "ProviderBase()"
+    assert str(pb) == "<ProviderBase at {0}>".format(hex(id(pb)))
 
 
 def test_ProviderBase_list_methods(server):

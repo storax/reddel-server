@@ -7,8 +7,9 @@ import epc.handler
 import epc.server
 import six
 
-
 __all__ = ['Server']
+
+logger = logging.getLogger('reddel')
 
 
 class Server(epc.server.EPCServer):
@@ -34,11 +35,13 @@ class Server(epc.server.EPCServer):
 
     def _set_funcs(self):
         """Register all functions from all providers."""
+        logger.debug("resetting registered functions")
         self.funcs = {}
         self.register_function(self.set_logging_level)
         if self._provider:
             for name, f in self._provider._get_methods().items():
                 self.register_function(f, name=name)
+        logger.debug("registered the following functions: %s", self.funcs.keys())
 
     def set_logging_level(self, level):
         """Set logging level
@@ -59,11 +62,13 @@ class Server(epc.server.EPCServer):
             except KeyError:
                 raise ValueError("Invalid logging level %s" % level)
         self.logger.setLevel(level)
+        logger.setLevel(level)
 
     def get_provider(self):
         """The :class:`reddel_server.Provider` instance that provides methods."""
         return self._provider
 
     def set_provider(self, provider):
+        logger.debug("setting provider to %s", provider)
         self._provider = provider
         self._set_funcs()

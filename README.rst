@@ -93,7 +93,7 @@ You can start a reddel server from within Emacs like shown above or start it fro
 A executable ``reddel`` is provided by this project, which should suitable for most usecases.
 ::
 
-	$ reddel --help
+  $ reddel --help
   Usage: reddel [OPTIONS]
 
   Options:
@@ -101,6 +101,7 @@ A executable ``reddel`` is provided by this project, which should suitable for m
     --port INTEGER       address to bind the server to
     -p, --provider TEXT  dotted path to a provider class
     -v, --verbosity LVL  Either CRITICAL, ERROR, WARNING, INFO or DEBUG
+    --debug              Show tracebacks when erroring.
     --help               Show this message and exit.
 
 If you need advanced features check the `reference guide <reference/index>`_.
