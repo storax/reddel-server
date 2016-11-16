@@ -2,4 +2,4 @@
 Authors
 =======
 
-* David Zuber - https://storax.github.io
+* David Zuber - https://github.com/storax
