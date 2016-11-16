@@ -47,6 +47,10 @@ class BaronTypeValidator(ValidatorInterface):
         """
         self.identifiers = identifiers
         self.single = single
+        """True if only a single root node is accepted as input source.
+        :meth:`reddel_server.BaronTypeValidator.transform` will then return
+        the first node.
+        """
 
     def __call__(self, red):
         """Validate the given redbaron source

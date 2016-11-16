@@ -20,6 +20,11 @@ _RED_FUNC_ATTRS = ['red', 'validators']
 def redwraps(towrap):
     """Use this when creating decorators instead of :func:`functools.wraps`
 
+    :param towrap: the function to wrap
+    :type towrap: :data:`types.FunctionType`
+    :returns: the decorator
+    :rtype: :data:`types.FunctionType`
+
     Makes sure to transfer special reddel attributes to the wrapped function.
     On top of that uses :func:`functools.wraps`.
 
@@ -36,10 +41,6 @@ def redwraps(towrap):
                 return func(*args, **kwargs)
             return wrapped
 
-    :param towrap: the function to wrap
-    :type towrap: :data:`types.FunctionType`
-    :returns: the decorator
-    :rtype: :data:`types.FunctionType`
     """
     def redwraps_dec(func):
         if towrap:
@@ -53,6 +54,12 @@ def redwraps(towrap):
 
 def red_src(dump=True):
     """Create decorator that converts the first argument into a red baron source
+
+    :param dump: if True, dump the return value from the wrapped function.
+                 Expects the return type to be a :class:`redbaron.RedBaron` object.
+    :type dump: :class:`bool`
+    :returns: the decorator
+    :rtype: :data:`types.FunctionType`
 
     Example:
 
@@ -103,11 +110,6 @@ def red_src(dump=True):
         >>> MyProvider(reddel_server.Server()).echo("1+1")
         '1+1'
 
-    :param dump: if True, dump the return value from the wrapped function.
-                 Expects the return type to be a :class:`redbaron.RedBaron` object.
-    :type dump: :class:`bool`
-    :returns: the decorator
-    :rtype: :data:`types.FunctionType`
     """
     def red_src_dec(func):
         @redwraps(func)
@@ -126,6 +128,39 @@ def red_validate(validators):
 
     :param validators: the validators
     :type validators: :class:`validators.ValidatorInterface`
+
+    Validators can be used to provide sanity checks.
+    :meth:`reddel_server.ProviderBase.list_methods` uses them to filter
+    out methods that are incompatible with the given input, which can be used
+    to build dynamic UIs.
+
+    To use this validator is very simple.
+    Create one or more validator instances (have to inherit from :class:`reddel_server.ValidatorInterface`)
+    and provide them as the argument:
+
+    .. testcode::
+
+        import reddel_server
+
+        validator = reddel_server.BaronTypeValidator(["def"], single=True)
+        class MyProvider(reddel_server.ProviderBase):
+            @reddel_server.red_src()
+            @reddel_server.red_validate([validator])
+            def foo(self, red):
+                assert red.type == 'def'
+
+        provider = MyProvider(reddel_server.Server())
+
+        provider.foo("def bar(): pass")  # works
+
+        try:
+            provider.foo("1+1")
+        except reddel_server.ValidationException:
+            pass
+        else:
+            assert False, "Validator should have raised"
+
+    See `Validators`_.
     """
     def red_validate_dec(func):
         @redwraps(func)
@@ -144,6 +179,21 @@ def red_validate(validators):
 def red_type(identifiers, single=True):
     """Create decorator that checks if the root is identified by identifier
 
+    Simple shortcut for doing:
+
+    .. testsetup::
+
+        import reddel_server
+
+        identifiers = ['def', 'ifelseblock']
+        single=True
+
+    .. testcode::
+
+        reddel_server.red_validate([reddel_server.BaronTypeValidator(identifiers, single=single)])
+
+    See :func:`reddel_server.red_validate`.
+
     :param identifiers: red baron node identifiers
     :type identifiers: list of :class:`str`
     :param single: expect a single node in the initial node list. Pass on the first node.
@@ -155,10 +205,40 @@ def red_type(identifiers, single=True):
 
 
 class ProviderBase(object):
-    """Provide minimal functionality"""
+    """Base class for all Providers.
 
+    A provider exposes methods via the :class:`reddel_server.Server` to clients.
+    By default all public methods (that do not start with an underscore) are exposed.
+
+    Creating your own basic provider is very simple:
+
+    .. testcode::
+
+        import reddel_server
+
+        class MyProvider(reddel_server.ProviderBase):
+            def exposed(self):
+                print("I'm exposed")
+            def private(self):
+                print("I'm private")
+
+    .. testcode::
+
+        server = reddel_server.Server()
+        provider = MyProvider(server)
+        server.set_provider(provider)
+
+    When starting reddel from the command line via the command ``reddel``,
+    it's automatically setup with a :class:`reddel_server.ChainedProvider`,
+    which combines multiple providers together.
+    It also gives you the ability to call :meth:`reddel_server.ChainedProvider.add_provider`
+    from a client.
+
+    You can get a list of all methods provided by a provider by calling
+    :meth:`reddel_server.ProviderBase.list_methods`.
+    """
     def __init__(self, server):
-        """Init provider
+        """Initialize provider
 
         :param server: the server that is using the provider
         :type server: :class:`reddel_server.Server`
@@ -176,10 +256,6 @@ class ProviderBase(object):
     @property
     def server(self):
         return self._server
-
-    @property
-    def log(self):
-        return self._server.logger
 
     def _get_methods(self, src=None):
         """Return a dictionary of all methods provided.
@@ -207,7 +283,7 @@ class ProviderBase(object):
     def list_methods(self, src=None):
         """Return a list of methods that this Provider exposes to clients
 
-        To get more information for each method use :meth:`ProviderBase.help`.
+        To get more information for each method use :meth:`reddel_server.ProviderBase.help`.
 
         By default this returns all available methods.
         But it can also be used to only get methods that actually work on a given source.
@@ -230,6 +306,9 @@ class ProviderBase(object):
     def help(self, name):
         """Return the docstring of the method
 
+        :param name: the name of the method.
+        :type name: :class:`str`
+
         Example:
 
         .. testcode::
@@ -246,8 +325,6 @@ class ProviderBase(object):
 
             ...
 
-        :param name: the name of the method.
-        :type name: :class:`str`
         """
         method = getattr(self, name)
         return method.__doc__
@@ -273,16 +350,42 @@ class ProviderBase(object):
 class ChainedProvider(ProviderBase):
     """Provider that can chain multiple other providers together
 
-    Methods are cached in :data:`ChainedProvider._cached_methods`.
-    :meth:`ChainedProvider._get_methods` will use the cached value unless it's ``None``.
-    :meth:`Chained.Provider.add_provider` will reset the cache.
+    This is the provider used by the command line client to combine
+    :class:`reddel_server.RedBaronProvider` with third party providers.
+    :meth:`reddel_server.ChainedProvider.add_provider` is a simple function
+    to provide a simple plug-in system.
+
+    Example:
+
+    .. testcode::
+
+        import reddel_server
+
+        class FooProvider(reddel_server.ProviderBase):
+            def foo(self): pass
+
+        class BarProvider(reddel_server.ProviderBase):
+            def bar(self): pass
+
+        server = reddel_server.Server()
+        providers = [FooProvider(server), BarProvider(server)]
+        p = reddel_server.ChainedProvider(server, providers)
+        methods = p.list_methods()
+        assert "foo" in methods
+        assert "bar" in methods
+
+    Methods are cached in :data:`reddel_server.ChainedProvider._cached_methods`.
+    :meth:`reddel_server.ChainedProvider._get_methods` will use the cached value unless it's ``None``.
+    :meth:`reddel_server.Chained.Provider.add_provider` will reset the cache.
     """
     def __init__(self, server, providers=()):
-        """Init provider
+        """Initialize a provider which acts as a combination of the given
+        providers.
 
         :param server: the server that is using the provider
         :type server: :class:`reddel_server.Server`
-        :param providers: list of providers
+        :param providers: list of providers.
+                          A provider's methods at the front of the list will take precedence.
         :type providers: :class:`list` of :class:`ProviderBase`
         """
         super(ChainedProvider, self).__init__(server)
@@ -301,8 +404,20 @@ class ChainedProvider(ProviderBase):
     def add_provider(self, dotted_path):
         """Add a new provider
 
-        :param dotted_path: dotted path to provider class
+        :param dotted_path: dotted path to provider class.
+                            E.g. ``mypkg.mymod.MyProvider``.
         :type dotted_path: :class:`str`
+
+        This provides a simple plug-in system.
+        A client (e.g. Emacs) can call ``add_provider``
+        with a dotted path to a class within a module.
+        The module has to be importable. So make sure you installed it or
+        added the directory to the ``PYTHONPATH``.
+
+        If the given provider has methods with the same name as the existing ones,
+        it's methods will take precedence.
+
+        This will invalidate the cached methods on this instance and also on the server.
         """
         providercls = utils.get_attr_from_dotted_path(dotted_path)
         self._providers.insert(0, providercls(self.server))

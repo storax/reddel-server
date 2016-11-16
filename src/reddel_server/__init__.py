@@ -54,6 +54,8 @@ See:
   * :func:`red_validate <reddel_server.red_validate>`
   * :func:`red_type <reddel_server.red_type>`
 
+.. _Validators:
+
 ----------
 Validators
 ----------

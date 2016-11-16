@@ -27,7 +27,7 @@ Reddel-Server
     :target:  https://github.com/storax/reddel-server/blob/master/LICENSE
 
 .. |docs| image:: https://readthedocs.org/projects/reddel-server/badge/?style=flat
-    :target: https://readthedocs.org/projects/reddel-server
+    :target: http://reddel-server.readthedocs.io/en/latest/
     :alt: Documentation Status
 
 .. |travis| image:: https://travis-ci.org/storax/reddel-server.svg?branch=master

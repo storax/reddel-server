@@ -21,9 +21,9 @@ class Server(epc.server.EPCServer):
     allow_reuse_address = True
 
     def __init__(self, server_address=('localhost', 0), RequestHandlerClass=epc.handler.EPCHandler):
-        """Init server with the given handler.
+        """Initialize server serving the given address with the given handler.
 
-        :param server_address: url/ip and port
+        :param server_address: URL/IP and port
         :type server_address: tuple
         :param RequestHandlerClass: the handler class to use
         :type RequestHandlerClass: :class:`epc.handler.EPCHandler`
@@ -46,6 +46,11 @@ class Server(epc.server.EPCServer):
     def set_logging_level(self, level):
         """Set logging level
 
+        :param level: either ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL`` or integer
+        :type level: :class:`str` | :class:`int`
+        :returns: None
+        :raises: None
+
         Can be called with integer or a string:
 
         .. doctest::
@@ -61,11 +66,6 @@ class Server(epc.server.EPCServer):
 
         The string has to be one of the builtin logging levels of :mod:`logging`,
         see `Logging Levels <https://docs.python.org/3/library/logging.html#logging-levels>`_.
-
-        :param level: either ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL`` or integer
-        :type level: :class:`str` | :class:`int`
-        :returns: None
-        :raises: None
         """
         if isinstance(level, six.string_types):
             try:

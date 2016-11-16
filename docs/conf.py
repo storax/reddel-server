@@ -56,3 +56,6 @@ napoleon_use_param = False
 intersphinx_mapping = {'python': ('https://docs.python.org/3/', None),
                        'redbaron': ('http://redbaron.readthedocs.io/en/latest/', None),
                        'epc': ('http://python-epc.readthedocs.io/en/latest/', None)}
+
+autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
+autoclass_content = 'both'
