@@ -28,7 +28,8 @@ def test_main_redbaseexception(mock_server):
         "RedBaseExceptions should only get logged"
         "and the traceback should only be shown if the debug flag is set."
     )
-    assert "Expected a dotted path (e.g. 'mypkg.mymod.MyClass') but got 'asdf'" in result.output
+    expected = "Expected a dotted path (e.g. 'mypkg.mymod.MyClass') but got {0!r}".format(u'asdf')
+    assert expected in result.output
     assert result.exit_code == 1
 
 

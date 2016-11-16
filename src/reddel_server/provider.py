@@ -23,6 +23,19 @@ def redwraps(towrap):
     Makes sure to transfer special reddel attributes to the wrapped function.
     On top of that uses :func:`functools.wraps`.
 
+    Example:
+
+
+    .. testcode::
+
+        import reddel_server
+
+        def my_decorator(func):
+            @reddel_server.redwraps(func)  # here you would normally use functools.wraps
+            def wrapped(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapped
+
     :param towrap: the function to wrap
     :type towrap: :data:`types.FunctionType`
     :returns: the decorator
@@ -40,6 +53,55 @@ def redwraps(towrap):
 
 def red_src(dump=True):
     """Create decorator that converts the first arg into a red baron src
+
+    Example:
+
+    .. testcode::
+
+        import redbaron
+        import reddel_server
+
+        class MyProvider(reddel_server.ProviderBase):
+            @reddel_server.red_src(dump=False)
+            def inspect_red(self, red):
+                assert isinstance(red, redbaron.RedBaron)
+                red.help()
+
+        MyProvider(reddel_server.Server()).inspect_red("1+1")
+
+    .. testoutput::
+
+        0 -----------------------------------------------------
+        BinaryOperatorNode()
+          # identifiers: binary_operator, binary_operator_, binaryoperator, binaryoperatornode
+          value='+'
+          first ->
+            IntNode()
+              # identifiers: int, int_, intnode
+              value='1'
+          second ->
+            IntNode()
+              # identifiers: int, int_, intnode
+              value='1'
+
+    By default the return value is expected to be a transformed :class:`redbaron.RedBaron` object
+    that can be dumped. This is useful for taking a source as argument, transforming it and returning it back
+    so that it the editor can replace the original source:
+
+
+    .. doctest::
+
+        >>> import redbaron
+        >>> import reddel_server
+
+        >>> class MyProvider(reddel_server.ProviderBase):
+        ...     @reddel_server.red_src(dump=True)
+        ...     def echo(self, red):
+        ...         assert isinstance(red, redbaron.RedBaron)
+        ...         return red
+
+        >>> MyProvider(reddel_server.Server()).echo("1+1")
+        '1+1'
 
     :param dump: if True, dump the return value from the wrapped function.
                  Expectes the return type to be a :class:`redbaron.RedBaron` object.
@@ -145,6 +207,15 @@ class ProviderBase(object):
     def list_methods(self, src=None):
         """Return a list of methods that this Provider exposes to clients
 
+        To get more information for each method use :meth:`ProviderBase.help`.
+
+        By default this returns all available methods.
+        But it can also be used to only get methods that actually work on a given source.
+        This feature might be handy to dynamically build UIs that adapt to the current context.
+
+        To write your own methods that can be filtered in the same way, use the
+        :func:`reddel_server.red_validate` or :func:`reddel_server.red_type` decorators.
+
         :param source: if src return only compatible methods
         :type source: :class:`str`
         :returns: list of :class:`str`
@@ -159,6 +230,22 @@ class ProviderBase(object):
     def help(self, name):
         """Return the docstring of the method
 
+        Example:
+
+        .. testcode::
+
+            import reddel_server
+            server = reddel_server.Server()
+            p = reddel_server.ProviderBase(server)
+            for m in p.list_methods():
+                print(m + ":")
+                print(p.help(m))
+
+        .. testoutput::
+            :hide:
+
+            ...
+
         :param name: the name of the method.
         :type name: :class:`str`
         """
@@ -171,12 +258,14 @@ class ProviderBase(object):
         return reddel_server.__version__
 
     def echo(self, echo):
-        """Echo the given string
+        """Echo the given object
 
-        :param echo: the string to echo
-        :type echo: :class:`str`
-        :returns: echo
-        :rtype: :class:`str`
+        Can be used for simple tests.
+        For example to test if certain values can be send to
+        and received from the server.
+
+        :param echo: the object to echo
+        :returns: the given echo
         """
         return echo
 

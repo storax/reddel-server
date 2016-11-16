@@ -67,15 +67,15 @@ An example on how to expose a simple function to add arguments::
 
 Start the reddel server from Emacs::
 
-  (require 'epc)
+  >>> (require 'epc)
 
-  (defvar my-epc (epc:start-epc "reddel" nil))
+  >>> (defvar my-epc (epc:start-epc "reddel" nil))
 
-  ;; make sure myprovidermod is in a directory within the PYTHONPATH
-  (epc:call-sync my-epc 'add_provider '("myprovidermod.MyProvider"))
+  >>> ;; make sure myprovidermod is in a directory within the PYTHONPATH
+  >>> (epc:call-sync my-epc 'add_provider '("myprovidermod.MyProvider"))
 
-  (message (epc:call-sync my-epc 'add_arg '("def foo(arg1, arg3): pass" 1 "arg2")))
-  >> def foo(arg1, arg2, arg3): pass 
+  >>> (message (epc:call-sync my-epc 'add_arg '("def foo(arg1, arg3): pass" 1 "arg2")))
+  "def foo(arg1, arg2, arg3): pass"
 
 Redbaron provides a lossless format, so even formatting and comments are preserved.
 
@@ -104,7 +104,27 @@ A executable ``reddel`` is provided by this project, which should suitable for m
     --debug              Show tracebacks when erroring.
     --help               Show this message and exit.
 
-If you need advanced features check the `reference guide <reference/index>`_.
+.. list-table::
+
+    * - ``--address TEXT``
+      - Default is ``localhost``. Can be an IP or domain name.
+    * - ``--port INTEGER``
+      - Defaults to a random free port.
+    * - ``-p, --provider TEXT``
+      - Example: ``mypkg.mymod.MyProviderClass``
+        You can provide this multiple times.
+        Defines additional providers that are available from the start.
+        More providers can be added at runtime via ``reddel_server.ChainedProvider.add_provider``.
+    * - ``-v, --verbosity LVL``
+      - Define the logging level.
+    * - ``--debug``
+      - By default all expected exceptions are only logged without the traceback.
+        If this flag is set, the traceback is printed as well.
+    * - ``--help``
+      - Show the help message and exit.
+
+If you need advanced features check the `reference guide <reference/index>`_ for help
+on how to write your own server.
 
 Documentation
 =============

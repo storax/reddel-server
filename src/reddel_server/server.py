@@ -46,20 +46,31 @@ class Server(epc.server.EPCServer):
     def set_logging_level(self, level):
         """Set logging level
 
+        Can be called with integer or a string:
+
+        .. doctest::
+
+            >>> import logging
+            >>> import reddel_server
+            >>> server = reddel_server.Server()
+            >>> server.set_logging_level("DEBUG")
+            >>> server.set_logging_level(logging.INFO)
+            >>> server.set_logging_level(10)
+            >>> server.logger.level
+            10
+
+        The string has to be one of the builtin logging levels of :mod:`logging`,
+        see `Logging Levels <https://docs.python.org/3/library/logging.html#logging-levels>`_.
+
         :param level: either ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL`` or integer
         :type level: :class:`str` | :class:`int`
         :returns: None
         :raises: None
         """
         if isinstance(level, six.string_types):
-            mapping = {"DEBUG": logging.DEBUG,
-                       "INFO": logging.INFO,
-                       "WARNING": logging.WARNING,
-                       "ERROR": logging.ERROR,
-                       "CRITICAL": logging.CRITICAL}
             try:
-                level = mapping[level]
-            except KeyError:
+                getattr(logging, level)
+            except AttributeError:
                 raise ValueError("Invalid logging level %s" % level)
         self.logger.setLevel(level)
         logger.setLevel(level)
