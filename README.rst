@@ -4,15 +4,26 @@ Reddel-Server
 
 .. start-badges
 
-.. list-table::
-    :stub-columns: 1
+- |license| |issues| |stars| |fork|
+- |docs|
+- |travis| |coveralls|
+- |version| |downloads| |wheel| |supported-versions| |supported-implementations|
 
-    * - docs
-      - |docs|
-    * - tests
-      - |travis| |coveralls|
-    * - package
-      - |version| |downloads| |wheel| |supported-versions| |supported-implementations|
+.. |fork| image:: https://img.shields.io/github/forks/badges/shields.svg?style=social&label=Fork
+    :alt: Github Forks
+    :target: https://github.com/storax/reddel-server/network
+
+.. |stars| image:: https://img.shields.io/github/stars/badges/shields.svg?style=social&label=Star
+    :alt: Github Stars
+    :target: https://github.com/storax/reddel-server/stargazers
+
+.. |issues| image:: https://img.shields.io/github/issues/storax/reddel-server.svg
+    :alt: Github Issues
+    :target: https://github.com/storax/reddel-server/issues
+
+.. |license| image:: https://img.shields.io/github/license/storax/reddel-server.svg
+    :alt: License
+    :target:  https://github.com/storax/reddel-server/blob/master/LICENSE
 
 .. |docs| image:: https://readthedocs.org/projects/reddel-server/badge/?style=flat
     :target: https://readthedocs.org/projects/reddel-server
@@ -46,10 +57,14 @@ Reddel-Server
     :alt: Supported implementations
     :target: https://pypi.python.org/pypi/reddel-server
 
+.. |status| image:: https://img.shields.io/pypi/status/reddel-server.svg?style=flat
+    :alt: Project Status
+    :target: https://pypi.python.org/pypi/reddel-server
 
 .. end-badges
 
-`Python EPC server component <http://python-epc.readthedocs.io/en/latest/>`_ for reddel.
+`Python EPC server component <http://python-epc.readthedocs.io/en/latest/>`_ for
+`reddel <https://github.com/storax/reddel-server>`_.
 It provides an easy way to send (python) source code from Emacs to the server,
 inspect or transform it via `Redbaron <http://redbaron.readthedocs.io/en/latest/>`_ and send the result back.
 
@@ -149,7 +164,6 @@ Bugs/Requests
 =============
 
 Please use the `GitHub issue tracker <https://github.com/storax/reddel-server/issues>`_ to submit bugs or request features.
-
 
 Development
 ===========
