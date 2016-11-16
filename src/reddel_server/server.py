@@ -15,7 +15,7 @@ logger = logging.getLogger('reddel')
 class Server(epc.server.EPCServer):
     """EPCServer that provides basic functionality.
 
-    If a provider can change it's mehtods dynamically, make sure to reassign it to :data:`Server.provider`
+    If a provider can change it's methods dynamically, make sure to reassign it to :data:`Server.provider`
     to reset the method cache.
     """
     allow_reuse_address = True

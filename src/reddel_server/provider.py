@@ -52,7 +52,7 @@ def redwraps(towrap):
 
 
 def red_src(dump=True):
-    """Create decorator that converts the first arg into a red baron src
+    """Create decorator that converts the first argument into a red baron source
 
     Example:
 
@@ -104,7 +104,7 @@ def red_src(dump=True):
         '1+1'
 
     :param dump: if True, dump the return value from the wrapped function.
-                 Expectes the return type to be a :class:`redbaron.RedBaron` object.
+                 Expects the return type to be a :class:`redbaron.RedBaron` object.
     :type dump: :class:`bool`
     :returns: the decorator
     :rtype: :data:`types.FunctionType`
@@ -184,7 +184,7 @@ class ProviderBase(object):
     def _get_methods(self, src=None):
         """Return a dictionary of all methods provided.
 
-        :param source: if src return only compatible methods
+        :param source: if ``src`` return only compatible methods
         :type source: :class:`redbaron.RedBaron`
         :returns: dict method names and methods
         """
@@ -216,7 +216,7 @@ class ProviderBase(object):
         To write your own methods that can be filtered in the same way, use the
         :func:`reddel_server.red_validate` or :func:`reddel_server.red_type` decorators.
 
-        :param source: if src return only compatible methods
+        :param source: if ``src`` return only compatible methods
         :type source: :class:`str`
         :returns: list of :class:`str`
         """
@@ -312,7 +312,7 @@ class ChainedProvider(ProviderBase):
     def _get_methods(self, src=None):
         """Return all methods provided.
 
-        :param source: if src return only compatible methods
+        :param source: if ``src`` return only compatible methods
         :type source: :class:`str`
         :returns: dict method names and methods
         """

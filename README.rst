@@ -4,7 +4,8 @@ Reddel-Server
 
 .. start-badges
 
-- |license| |issues| |stars| |fork|
+- |license| |status| |issues|
+- |stars| |fork|
 - |docs|
 - |travis| |coveralls|
 - |version| |downloads| |wheel| |supported-versions| |supported-implementations|
@@ -105,7 +106,7 @@ Usage
 =====
 
 You can start a reddel server from within Emacs like shown above or start it from the command line.
-A executable ``reddel`` is provided by this project, which should suitable for most usecases.
+A executable ``reddel`` is provided by this project, which should suitable for most use cases.
 ::
 
   $ reddel --help
