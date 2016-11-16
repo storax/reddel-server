@@ -5,7 +5,6 @@ import click
 import click_log
 
 import reddel_server
-from reddel_server import utils
 
 
 @click.command()
@@ -15,13 +14,9 @@ from reddel_server import utils
 @click_log.simple_verbosity_option()
 def main(address, port, provider):
     server = reddel_server.Server((address, port))
-    provider = provider + ('reddel_server.RedBaronProvider', 'reddel_server.Provider')
-    providers = []
-    for p in provider:
-        providercls = utils.get_attr_from_dotted_path(p)
-        providers.append(providercls(server))
+    providers = [reddel_server.RedBaronProvider(server)]
     chainedprovider = reddel_server.ChainedProvider(server, providers=providers)
-    server.provider = chainedprovider
+    server.set_provider(chainedprovider)
     click_log.init(server.logger)
     server.print_port()
     server.serve_forever()

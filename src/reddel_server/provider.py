@@ -10,7 +10,7 @@ from . import exceptions
 from . import utils
 from . import validators
 
-__all__ = ['ProviderBase', 'Provider', 'ChainedProvider', 'RedBaronProvider',
+__all__ = ['ProviderBase', 'ChainedProvider', 'RedBaronProvider',
            'redwraps', 'red_src', 'red_type', 'red_validate']
 
 
@@ -29,11 +29,12 @@ def redwraps(towrap):
     :rtype: :data:`types.FunctionType`
     """
     def redwraps_dec(func):
-        wrapped = functools.wraps(towrap)(func)
+        if towrap:
+            func = functools.wraps(towrap)(func)
         for attr in _RED_FUNC_ATTRS:
             val = getattr(towrap, attr, None)
-            setattr(wrapped, attr, val)
-        return wrapped
+            setattr(func, attr, val)
+        return func
     return redwraps_dec
 
 
@@ -103,8 +104,12 @@ class ProviderBase(object):
         super(ProviderBase, self).__init__()
         self._server = server
 
-    def __repr__(self):
+    def __str__(self):
         return "{classname}()".format(classname=self.__class__.__name__)
+
+    def __repr__(self):
+        return "{classname}({server!r})".format(classname=self.__class__.__name__,
+                                                server=self.server)
 
     @property
     def server(self):
@@ -118,19 +123,17 @@ class ProviderBase(object):
         """Return a dictionary of all methods provided.
 
         :param source: if src return only compatible methods
-        :type source: :class:`str`
+        :type source: :class:`redbaron.RedBaron`
         :returns: dict method names and methods
         """
-        if src:
-            red = redbaron.RedBaron(src)
         d = {}
         for attrname in dir(self):
             attr = getattr(self, attrname)
-            if not attrname.startswith('_') and isinstance(attr, types.MethodType):
+            if not attrname.startswith('_') and isinstance(attr, (types.FunctionType, types.MethodType)):
                 if src and hasattr(attr, 'validators'):
                     for v in (attr.validators or []):
                         try:
-                            v(red)
+                            v(src)
                         except exceptions.ValidationException:
                             break
                     else:
@@ -140,13 +143,15 @@ class ProviderBase(object):
         return d
 
     def list_methods(self, src=None):
-        """Return a list of methods
+        """Return a list of methods that this Provider exposes to clients
 
         :param source: if src return only compatible methods
         :type source: :class:`str`
         :returns: list of :class:`str`
         """
-        return list(self._get_methods(src=src).keys())
+        if src:
+            src = redbaron.RedBaron(src)
+        return sorted(self._get_methods(src=src).keys())
 
     def _get_method(self, name):
         return getattr(self, name)
@@ -160,18 +165,10 @@ class ProviderBase(object):
         method = getattr(self, name)
         return method.__doc__
 
-
-class Provider(ProviderBase):
-    """Provide basic functionality"""
-
     def reddel_version(self):
         """Return the reddel version"""
         import reddel_server
         return reddel_server.__version__
-
-    def version(self):
-        """Return the provider version"""
-        return self.reddel_version()
 
     def echo(self, echo):
         """Echo the given string
@@ -185,7 +182,12 @@ class Provider(ProviderBase):
 
 
 class ChainedProvider(ProviderBase):
-    """Provider that can chain multiple other providers together"""
+    """Provider that can chain multiple other providers together
+
+    Methods are cached in :data:`ChainedProvider._cached_methods`.
+    :meth:`ChainedProvider._get_methods` will use the cached value unless it's ``None``.
+    :meth:`Chained.Provider.add_provider` will reset the cache.
+    """
     def __init__(self, server, providers=()):
         """Init provider
 
@@ -196,6 +198,7 @@ class ChainedProvider(ProviderBase):
         """
         super(ChainedProvider, self).__init__(server)
         self._providers = providers
+        self._cached_methods = None
 
     def _get_method(self, name):
         """Return a method from any of the providers
@@ -213,8 +216,9 @@ class ChainedProvider(ProviderBase):
         :type dotted_path: :class:`str`
         """
         providercls = utils.get_attr_from_dotted_path(dotted_path)
-        self._providers = self._providers.insert(0, providercls(self.server))
-        self.server.provider = self
+        self._providers.insert(0, providercls(self.server))
+        self._cached_methods = None
+        self.server._set_funcs()  # to reset the cache of the server
 
     def _get_methods(self, src=None):
         """Return all methods provided.
@@ -223,10 +227,12 @@ class ChainedProvider(ProviderBase):
         :type source: :class:`str`
         :returns: dict method names and methods
         """
-        d = super(ChainedProvider, self)._get_methods(src=src)
-        for p in reversed(self._providers):
-            d.update(p._get_methods(src=src))
-        return d
+        if self._cached_methods is None:
+            self._cached_methods = {}
+            for p in reversed(self._providers):
+                self._cached_methods.update(p._get_methods(src=src))
+            self._cached_methods.update(super(ChainedProvider, self)._get_methods(src=src))
+        return self._cached_methods
 
 
 class RedBaronProvider(ProviderBase):
@@ -254,7 +260,7 @@ class RedBaronProvider(ProviderBase):
     @red_src(dump=False)
     @red_type(["def"])
     def get_args(self, red):
-        """Return a list of args."""
+        """Return a list of args and their default value (if any) as source code."""
         args = []
         for arg in red.arguments:
             if isinstance(arg, (redbaron.ListArgumentNode, redbaron.DictArgumentNode)):
@@ -273,3 +279,23 @@ class RedBaronProvider(ProviderBase):
     def add_arg(self, red, index, arg):
         red.arguments.insert(index, arg)
         return red
+
+    @red_src()
+    def get_current(self, red, row, column):
+        return red.find_by_position((row, column))
+
+    @red_src(dump=False)
+    def get_parents(self, red, row, column):
+        parents = []
+        current = red.find_by_position((row, column))
+        while current != red:
+            region = current.absolute_bounding_box
+            nodetype = current.type
+            tl = region.top_left.to_tuple()
+            br = region.bottom_right.to_tuple()
+            current = current.parent
+            # if previous bounding box is the same take the parent higher in the hierachy
+            if parents and parents[-1][1] == tl and parents[-1][2] == br:
+                parents.pop()
+            parents.append((nodetype, tl, br))
+        return parents

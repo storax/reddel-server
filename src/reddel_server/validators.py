@@ -1,5 +1,4 @@
-"""Collection of validators
-"""
+"""Collection of validators"""
 from __future__ import absolute_import
 
 import abc

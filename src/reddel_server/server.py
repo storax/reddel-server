@@ -13,6 +13,9 @@ __all__ = ['Server']
 
 class Server(epc.server.EPCServer):
     """EPCServer that provides basic functionality.
+
+    If a provider can change it's mehtods dynamically, make sure to reassign it to :data:`Server.provider`
+    to reset the method cache.
     """
     allow_reuse_address = True
 
@@ -25,15 +28,16 @@ class Server(epc.server.EPCServer):
         :type RequestHandlerClass: :class:`epc.handler.EPCHandler`
         :raises: None
         """
-        super(Server, self).__init__(server_address, RequestHandlerClass=RequestHandlerClass, log_traceback=True)
+        epc.server.EPCServer.__init__(self, server_address, RequestHandlerClass=RequestHandlerClass, log_traceback=True)
         self._provider = None
         self._set_funcs()
 
     def _set_funcs(self):
+        """Register all functions from all providers."""
         self.funcs = {}
         self.register_function(self.set_logging_level)
-        if self.provider:
-            for name, f in self.provider._get_methods().items():
+        if self._provider:
+            for name, f in self._provider._get_methods().items():
                 self.register_function(f, name=name)
 
     def set_logging_level(self, level):
@@ -56,12 +60,10 @@ class Server(epc.server.EPCServer):
                 raise ValueError("Invalid logging level %s" % level)
         self.logger.setLevel(level)
 
-    @property
-    def provider(self):
+    def get_provider(self):
         """The :class:`reddel_server.Provider` instance that provides methods."""
         return self._provider
 
-    @provider.setter
-    def provider(self, provider):
+    def set_provider(self, provider):
         self._provider = provider
         self._set_funcs()
