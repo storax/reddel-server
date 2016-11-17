@@ -64,7 +64,7 @@ Validators are used to get all methods compatible on processing a given source.
 E.g. if the source is a function, reddel can report to Emacs which functions can be applied to
 functions and Emacs can use the information to dynamically build a UI.
 
-Validators can transform the source as well (see :meth:`transform <reddel_server.BaronTypeValidator.transform`).
+Validators can transform the source as well (see :meth:`transform <reddel_server.BaronTypeValidator.transform>`).
 
 See:
 
@@ -76,9 +76,11 @@ Exceptions
 ----------
 
 Custom exceptions raised in reddel.
+They all inherit from :class:`RedBaseException <reddel_server.RedBaseException>`.
 
 See:
 
+  * :class:`RedBaseException <reddel_server.RedBaseException>`
   * :class:`ValidationException <reddel_server.ValidationException>`
 
 """
@@ -88,11 +90,13 @@ from __future__ import absolute_import
 from .exceptions import *
 from .provider import *
 from .server import *
+from .utils import *
 from .validators import *
 
 __all__ = (exceptions.__all__ +
            server.__all__ +
            provider.__all__ +
+           utils.__all__ +
            validators.__all__)
 
 __version__ = "0.1.0"

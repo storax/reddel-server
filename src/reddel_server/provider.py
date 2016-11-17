@@ -1,7 +1,6 @@
 """Provide functionality to reddel"""
 from __future__ import absolute_import
 
-import functools
 import types
 
 import redbaron
@@ -11,45 +10,7 @@ from . import utils
 from . import validators
 
 __all__ = ['ProviderBase', 'ChainedProvider', 'RedBaronProvider',
-           'redwraps', 'red_src', 'red_type', 'red_validate']
-
-
-_RED_FUNC_ATTRS = ['red', 'validators']
-
-
-def redwraps(towrap):
-    """Use this when creating decorators instead of :func:`functools.wraps`
-
-    :param towrap: the function to wrap
-    :type towrap: :data:`types.FunctionType`
-    :returns: the decorator
-    :rtype: :data:`types.FunctionType`
-
-    Makes sure to transfer special reddel attributes to the wrapped function.
-    On top of that uses :func:`functools.wraps`.
-
-    Example:
-
-
-    .. testcode::
-
-        import reddel_server
-
-        def my_decorator(func):
-            @reddel_server.redwraps(func)  # here you would normally use functools.wraps
-            def wrapped(*args, **kwargs):
-                return func(*args, **kwargs)
-            return wrapped
-
-    """
-    def redwraps_dec(func):
-        if towrap:
-            func = functools.wraps(towrap)(func)
-        for attr in _RED_FUNC_ATTRS:
-            val = getattr(towrap, attr, None)
-            setattr(func, attr, val)
-        return func
-    return redwraps_dec
+           'red_src', 'red_type', 'red_validate']
 
 
 def red_src(dump=True):
@@ -112,7 +73,7 @@ def red_src(dump=True):
 
     """
     def red_src_dec(func):
-        @redwraps(func)
+        @utils.redwraps(func)
         def wrapped(self, src, *args, **kwargs):
             red = redbaron.RedBaron(src)
             retval = func(self, red, *args, **kwargs)
@@ -127,7 +88,7 @@ def red_validate(validators):
     """Create decorator that adds the given validators to the wrapped function
 
     :param validators: the validators
-    :type validators: :class:`validators.ValidatorInterface`
+    :type validators: :class:`reddel_server.ValidatorInterface`
 
     Validators can be used to provide sanity checks.
     :meth:`reddel_server.ProviderBase.list_methods` uses them to filter
@@ -163,7 +124,7 @@ def red_validate(validators):
     See `Validators`_.
     """
     def red_validate_dec(func):
-        @redwraps(func)
+        @utils.redwraps(func)
         def wrapped(self, red, *args, **kwargs):
             transformed = red
             for v in validators:

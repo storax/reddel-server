@@ -3,6 +3,7 @@ import redbaron
 
 import reddel_server
 from reddel_server import provider
+from reddel_server import utils
 
 
 TEST_DECORATORS = [
@@ -27,34 +28,13 @@ def server():
     server.server_close()
 
 
-def test_redwraps_add_attrs():
-    """Test that attibutes are added."""
-    @provider.redwraps(None)
-    def foo():
-        pass  # pragma: nocover
-    assert all([hasattr(foo, attr) for attr in provider._RED_FUNC_ATTRS])
-
-
-def test_redwraps_attr_value():
-    """Test that attibutes values are transferred."""
-    def bar():
-        pass  # pragma: nocover
-
-    bar.red = 'test'
-
-    @provider.redwraps(bar)
-    def foo():
-        pass  # pragma: nocover
-    assert all([getattr(foo, attr) == getattr(bar, attr, None) for attr in provider._RED_FUNC_ATTRS])
-
-
 @pytest.mark.parametrize('decorator', TEST_DECORATORS)
 def test_decorator_add_attrs(decorator):
     """Test that all attributes are added."""
     @decorator
     def foo(*args, **kwargs):
         pass  # pragma: nocover
-    assert all([hasattr(foo, attr) for attr in provider._RED_FUNC_ATTRS])
+    assert all([hasattr(foo, attr) for attr in utils._RED_FUNC_ATTRS])
 
 
 @pytest.mark.parametrize('decorator', TEST_DECORATORS)
@@ -76,8 +56,8 @@ def test_decorator_attr_defaults(decorator, values):
     def foo(*args, **kwargs):
         pass  # pragma: nocover
 
-    got = [getattr(foo, attr) for attr in provider._RED_FUNC_ATTRS]
-    expected = values or [None for _ in provider._RED_FUNC_ATTRS]
+    got = [getattr(foo, attr) for attr in utils._RED_FUNC_ATTRS]
+    expected = values or [None for _ in utils._RED_FUNC_ATTRS]
     assert  got == expected
 
 

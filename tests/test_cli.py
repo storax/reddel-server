@@ -30,7 +30,7 @@ def test_main_redbaseexception(mock_server):
     )
     expected = "Expected a dotted path (e.g. 'mypkg.mymod.MyClass') but got {0!r}".format(u'asdf')
     assert expected in result.output
-    assert result.exit_code == 1
+    assert result.exit_code == 0
 
 
 def test_main_redbaseexception_debug(mock_server):
@@ -38,4 +38,4 @@ def test_main_redbaseexception_debug(mock_server):
     runner = CliRunner()
     result = runner.invoke(cli.main, ["-p" "asdf", "--debug"])
     assert "Traceback (most recent call last)" in result.output
-    assert result.exit_code == 1
+    assert result.exit_code == 0
