@@ -241,9 +241,22 @@ def test_ChainedProvider_get_methods(foobarprovider, fooprovider, barprovider):
 
 
 def test_ChainedProvider_get_methods_cached(foobarprovider):
-    """Test that all methods from all providers are present."""
+    """Test that methods get cached."""
     methdict = foobarprovider._get_methods()
     assert methdict is foobarprovider._get_methods()
+
+
+def test_ChainedProvider_get_methods_cached_src(foobarprovider):
+    """Test that methods do not get cached when calling with a source."""
+    methdict = foobarprovider._get_methods('1+1')
+    assert methdict is not foobarprovider._get_methods('1+1')
+
+
+def test_ChainedProvider_get_methods_cached_src_fresh(foobarprovider):
+    """Test that methods do not get cached when calling with a source
+    when calling without source first."""
+    methdict = foobarprovider._get_methods()
+    assert methdict is not foobarprovider._get_methods('1+1')
 
 
 @pytest.mark.parametrize("method", ["foo", "bar"])

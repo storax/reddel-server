@@ -402,12 +402,16 @@ class ChainedProvider(ProviderBase):
         :type source: :class:`str`
         :returns: dict method names and methods
         """
-        if self._cached_methods is None:
-            self._cached_methods = {}
+        methods = {}
+        if src or self._cached_methods is None:
             for p in reversed(self._providers):
-                self._cached_methods.update(p._get_methods(src=src))
-            self._cached_methods.update(super(ChainedProvider, self)._get_methods(src=src))
-        return self._cached_methods
+                methods.update(p._get_methods(src=src))
+            methods.update(super(ChainedProvider, self)._get_methods(src=src))
+            if self._cached_methods is None:
+                self._cached_methods = methods
+        else:
+            methods = self._cached_methods
+        return methods
 
 
 class RedBaronProvider(ProviderBase):
