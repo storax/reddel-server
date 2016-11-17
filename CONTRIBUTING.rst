@@ -43,9 +43,9 @@ To set up `reddel-server` for local development:
 
     git clone git@github.com:your_name_here/reddel-server.git
 
-3. Create a branch for local development::
+3. Create a branch for local development. Branch of ``develop``::
 
-    git checkout -b name-of-your-bugfix-or-feature
+    git checkout -b name-of-your-bugfix-or-feature develop
 
    Now you can make your changes locally.
 
@@ -59,7 +59,7 @@ To set up `reddel-server` for local development:
     git commit -m "Your detailed description of your changes."
     git push origin name-of-your-bugfix-or-feature
 
-6. Submit a pull request through the GitHub website.
+6. Submit a pull request against ``develop`` through the GitHub website.
 
 Pull Request Guidelines
 -----------------------
