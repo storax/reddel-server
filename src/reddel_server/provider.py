@@ -445,10 +445,6 @@ class RedBaronProvider(ProviderBase):
         red.arguments.insert(index, arg)
         return red
 
-    @red_src()
-    def get_current(self, red, row, column):
-        return red.find_by_position((row, column))
-
     @red_src(dump=False)
     def get_parents(self, red, row, column):
         parents = []

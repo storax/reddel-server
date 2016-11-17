@@ -1,11 +1,10 @@
-========
-Contents
-========
+.. include:: ../README.rst
 
 .. toctree::
+   :hidden:
    :maxdepth: 2
 
-   readme
+   self
    builtin
    reference/index
    contributing

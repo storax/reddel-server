@@ -64,6 +64,9 @@ Reddel-Server
 
 .. end-badges
 
+.. contents:: Table of Contents
+    :local:
+
 `Python EPC server component <http://python-epc.readthedocs.io/en/latest/>`_ for
 `reddel <https://github.com/storax/reddel-server>`_.
 It provides an easy way to send (python) source code from Emacs to the server,
