@@ -341,7 +341,7 @@ class ChainedProvider(ProviderBase):
 
     Methods are cached in :data:`reddel_server.ChainedProvider._cached_methods`.
     :meth:`reddel_server.ChainedProvider._get_methods` will use the cached value unless it's ``None``.
-    :meth:`reddel_server.Chained.Provider.add_provider` will reset the cache.
+    :meth:`reddel_server.ChainedProvider.add_provider` will reset the cache.
     """
     def __init__(self, server, providers=None):
         """Initialize a provider which acts as a combination of the given

@@ -46,7 +46,6 @@ path you can add your own providers at runtime to extend reddel.
 See:
 
   * :class:`ProviderBase <reddel_server.ProviderBase>`
-  * :class:`Provider <reddel_server.Provider>`
   * :class:`ChainedProvider <reddel_server.ChainedProvider>`
   * :class:`RedBaronProvider <reddel_server.RedBaronProvider>`
   * :func:`redwraps <reddel_server.redwraps>`

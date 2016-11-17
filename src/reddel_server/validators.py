@@ -112,7 +112,7 @@ class BaronTypeValidator(ValidatorInterface):
     def __call__(self, red):
         """Validate the given redbaron source
 
-        :raises: :class:`ValidationException <reddel_server.ValidationException`
+        :raises: :class:`ValidationException <reddel_server.ValidationException>`
         """
         if self.single:
             count = len(red)

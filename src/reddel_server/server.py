@@ -15,8 +15,8 @@ logger = logging.getLogger('reddel')
 class Server(epc.server.EPCServer):
     """EPCServer that provides basic functionality.
 
-    If a provider can change it's methods dynamically, make sure to reassign it to :data:`Server.provider`
-    to reset the method cache.
+    If a provider can change it's methods dynamically,
+    make sure to call :meth:`reddel_server.Server.set_provider` to reset the method cache.
     """
     allow_reuse_address = True
 
@@ -76,10 +76,15 @@ class Server(epc.server.EPCServer):
         logger.setLevel(level)
 
     def get_provider(self):
-        """The :class:`reddel_server.Provider` instance that provides methods."""
+        """The :class:`reddel_server.ProviderBase` instance that provides methods."""
         return self._provider
 
     def set_provider(self, provider):
+        """Set the provider and reset the registered functions.
+
+        :param provider: the provider to set
+        :type provider: :class:`reddel_server.ProviderBase`
+        """
         logger.debug("setting provider to %s", provider)
         self._provider = provider
         self._set_funcs()
