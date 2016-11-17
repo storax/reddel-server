@@ -11,9 +11,40 @@ __all__ = ['BaronTypeValidator', 'ValidatorInterface']
 
 
 class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
-    """Validator interface.
+    """Validator interface
 
-    Override :meth:`ValidatorInterface.__call__`.
+    A validator checks a given source input and raises a
+    :class:`ValidationException <reddel_server.ValidationException>`
+    if the input is invalid.
+    This can be used to check, which methods of a provider are compatible
+    with a given input (see :func:`reddel_server.red_validate`).
+
+    Creating your own validator is simple.
+    Just subclass from this class and override :meth:`reddel_server.ValidatorInterface.__call__`.
+
+    .. testcode::
+
+        import redbaron
+        import reddel_server
+
+        class MyValidator(reddel_server.ValidatorInterface):
+            def __call__(self, red):
+                if len(red) != 1:
+                    raise reddel_server.ValidationException("Expected only a single root node.")
+
+        val = MyValidator()
+
+        val(redbaron.RedBaron("a=2"))
+
+        try:
+            val(redbaron.RedBaron("a=2+1\\nb=3"))
+        except reddel_server.ValidationException:
+            pass
+        else:
+            assert False, 'Validator should have raised.'
+
+    A Validator can also implement a :meth:`transformation <reddel_server.ValidatorInterface.transform>`.
+    This transformation is used in :func:`reddel_server.red_validate`.
     """
     @abc.abstractmethod
     def __call__(self, red):  # pragma: no cover
@@ -28,7 +59,11 @@ class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
     def transform(self, red):  # pragma: no cover
         """Transform the given red baron
 
-        :param red: a red baron or other nodes
+        The base implementation just returns the source.
+        See :meth:`reddel_server.BaronTypeValidator.transform` for an example.
+
+        :param red: a red baron source or other nodes
+        :returns: the transformed source
         """
         return red
 
@@ -36,6 +71,28 @@ class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
 class BaronTypeValidator(ValidatorInterface):
     """Validate that the given :class:`redbaron.RedBaron`
     contains the correct nodes and optionally that there is only a single root node.
+
+    Examples:
+
+    .. testcode::
+
+        from redbaron import RedBaron
+        import reddel_server
+
+        val1 = reddel_server.BaronTypeValidator(['def'], single=True)
+        # valid
+        val1(RedBaron('def foo(): pass'))
+        # invalid
+        invalid_sources = [RedBaron('def foo(): pass\\ndef bar(): pass'),  # two are invalid
+                           RedBaron('a=1')]  # not a function definition
+        for src in invalid_sources:
+            try:
+                val1(src)
+            except reddel_server.ValidationException:
+                pass
+            else:
+                assert False, "Validator should have raised: %s" % src
+
     """
     def __init__(self, identifiers, single=False):
         """Initialize the validator
@@ -68,7 +125,28 @@ class BaronTypeValidator(ValidatorInterface):
                                                      (self.identifiers, identifiers))
 
     def transform(self, red):
-        """If :data:`BaronTypeValidator.single` is True return the first node."""
+        """When :data:`reddel_server.BaronTypeValidator.single` is ``True`` return the first node.
+
+        When creating a :class:`redbaron.RedBaron` from a source,
+        the root is a list of nodes:
+
+        .. doctest::
+
+            >>> import redbaron
+            >>> src = redbaron.RedBaron("a=1")
+            >>> src
+            0   a=1
+            <BLANKLINE>
+
+        When :data:`reddel_server.BaronTypeValidator.single` is True
+        this function will return:
+
+        .. doctest::
+
+            >>> src[0]
+            a=1
+
+        """
         if self.single:
             return red[0]
         return red

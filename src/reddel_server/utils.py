@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import functools
 import importlib
-import itertools
 import logging
 
 __all__ = ['redwraps']

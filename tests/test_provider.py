@@ -258,6 +258,13 @@ def test_ChainedProvider_add_provider(foobarprovider):
     assert foobarprovider._get_method("spam")() == "spam"
 
 
+def test_ChainedProvider_add_provider_empty(server):
+    """Test that additional methods are added."""
+    cp = reddel_server.ChainedProvider(server)
+    cp.add_provider("test_provider.SpamProvider")
+    assert cp._get_method("spam")() == "spam"
+
+
 def test_ChainedProvider_add_provider_override(foobarprovider):
     """Test that adding a provider can override existing methods."""
     foobarprovider.add_provider("test_provider.SpamProvider")
@@ -331,12 +338,6 @@ def test_RedBaronProvider_add_arg(redprovider):
     src = "def foo(arg1): pass\n"
     expected = "def foo(arg1, kwarg2=None): pass\n"
     assert redprovider.add_arg(src, 1, "kwarg2=None") == expected
-
-
-def test_RedBaronProvider_get_current(redprovider):
-    src = "var = 1+2"
-    red = redbaron.RedBaron(src)
-    assert redprovider.get_current(src, 1, 8) == red[0].value.dumps()
 
 
 def test_RedBaronProvider_get_parents(redprovider):

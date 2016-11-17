@@ -121,6 +121,10 @@ def red_validate(validators):
         else:
             assert False, "Validator should have raised"
 
+    On top of that validators also can implement a :meth:`reddel_server.ValidatorInterface.transform`
+    function to transform the red source on the way down.
+    The transformed value is passed to the next validator and eventually into the function.
+
     See `Validators`_.
     """
     def red_validate_dec(func):
@@ -339,7 +343,7 @@ class ChainedProvider(ProviderBase):
     :meth:`reddel_server.ChainedProvider._get_methods` will use the cached value unless it's ``None``.
     :meth:`reddel_server.Chained.Provider.add_provider` will reset the cache.
     """
-    def __init__(self, server, providers=()):
+    def __init__(self, server, providers=None):
         """Initialize a provider which acts as a combination of the given
         providers.
 
@@ -350,7 +354,7 @@ class ChainedProvider(ProviderBase):
         :type providers: :class:`list` of :class:`ProviderBase`
         """
         super(ChainedProvider, self).__init__(server)
-        self._providers = providers
+        self._providers = providers or []
         self._cached_methods = None
 
     def _get_method(self, name):
@@ -374,6 +378,12 @@ class ChainedProvider(ProviderBase):
         with a dotted path to a class within a module.
         The module has to be importable. So make sure you installed it or
         added the directory to the ``PYTHONPATH``.
+
+        .. testcode::
+
+            import reddel_server
+            cp = reddel_server.ChainedProvider(reddel_server.Server())
+            cp.add_provider('reddel_server.RedBaronProvider')
 
         If the given provider has methods with the same name as the existing ones,
         it's methods will take precedence.
