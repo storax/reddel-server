@@ -411,15 +411,89 @@ class ChainedProvider(ProviderBase):
 
 
 class RedBaronProvider(ProviderBase):
-    """Provider for transforming source code via redbaron."""
+    """Provider for inspecting and transforming source code via redbaron."""
 
     @red_src(dump=False)
     def analyze(self, red, deep=2, with_formatting=False):
+        """Return the red baron help string for the given source
+
+        .. table::
+
+            +--------------+----------------+---------------+------------------+
+            | source input | outputs source | allowed types | only single node |
+            +==============+================+===============+==================+
+            | Yes          | No             | Any           | No               |
+            +--------------+----------------+---------------+------------------+
+
+        :param red: the red baron source
+        :type red: :class:`redbaron.RedBaron`
+        :param deep: how deep the nodes get printed
+        :type deep: :class:`int`
+        :param with_formatting: also analyze formatting nodes
+        :type with_formatting: :class:`bool`
+        :returns: the help text
+        :rtype: :class:`str`
+
+        Example:
+
+        .. doctest::
+
+            >>> import reddel_server
+            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
+            >>> print(p.analyze("1+1"))
+            BinaryOperatorNode()
+              # identifiers: binary_operator, binary_operator_, binaryoperator, binaryoperatornode
+              value='+'
+              first ->
+                IntNode()
+                  # identifiers: int, int_, intnode
+                  value='1'
+              second ->
+                IntNode()
+                  # identifiers: int, int_, intnode
+                  value='1'
+
+        """
         return "\n".join(red.__help__(deep=deep, with_formatting=False))
 
     @red_src()
     @red_type(["def"])
     def rename_arg(self, red, oldname, newname):
+        """Rename a argument
+
+        .. table::
+
+            +--------------+----------------+---------------+------------------+
+            | source input | outputs source | allowed types | only single node |
+            +==============+================+===============+==================+
+            | Yes          | Yes            | def           | Yes              |
+            +--------------+----------------+---------------+------------------+
+
+        :param red: the red baron source
+        :type red: :class:`redbaron.RedBaron`
+        :param oldname: name of the argument to rename
+        :type oldname: :class:`str`
+        :param newname: new name for the argument
+        :type newname: :class:`str`
+        :returns: the transformed source code
+        :rtype: :class:`redbaron.RedBaron`
+
+        Example:
+
+        .. doctest::
+
+            >>> import reddel_server
+            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
+            >>> src = \"\"\"def foo(arg1, arg2, kwarg2=1):  # arg2
+            ...     arg2 = arg2 or ""
+            ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
+            ... \"\"\"
+            >>> print(p.rename_arg(src, "arg2", "renamed"))
+            def foo(arg1, renamed, kwarg2=1):  # arg2
+                renamed = renamed or ""
+                return renamed + func(arg1, "arg2 arg2") + kwarg2
+            <BLANKLINE>
+        """
         for arg in red.arguments:
             if arg.target.value == oldname:
                 arg.target.value = newname
@@ -435,7 +509,36 @@ class RedBaronProvider(ProviderBase):
     @red_src(dump=False)
     @red_type(["def"])
     def get_args(self, red):
-        """Return a list of args and their default value (if any) as source code."""
+        """Return a list of args and their default value (if any) as source code
+
+        .. table::
+
+            +--------------+----------------+---------------+------------------+
+            | source input | outputs source | allowed types | only single node |
+            +==============+================+===============+==================+
+            | Yes          | No             | def           | Yes              |
+            +--------------+----------------+---------------+------------------+
+
+        :param red: the red baron source
+        :type red: :class:`redbaron.RedBaron`
+        :returns: list of argument name and default value.
+        :rtype: :class:`list` of :class:`tuple` or :class:`str` and :class:`str` | ``None``
+
+        The default value is always a string, except for arguments without one which will be
+        represented as None.
+
+        .. doctest::
+
+            >>> import reddel_server
+            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
+            >>> src = \"\"\"def foo(arg1, arg2, kwarg1=None, kwarg2=1, kwarg3='None'):
+            ...     arg2 = arg2 or ""
+            ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
+            ... \"\"\"
+            >>> p.get_args(src)
+            [('arg1', None), ('arg2', None), ('kwarg1', 'None'), ('kwarg2', '1'), ('kwarg3', "'None'")]
+
+        """
         args = []
         for arg in red.arguments:
             if isinstance(arg, (redbaron.ListArgumentNode, redbaron.DictArgumentNode)):
@@ -452,11 +555,96 @@ class RedBaronProvider(ProviderBase):
     @red_src()
     @red_type(["def"])
     def add_arg(self, red, index, arg):
+        """Add a argument at the given index
+
+        .. table::
+
+            +--------------+----------------+---------------+------------------+
+            | source input | outputs source | allowed types | only single node |
+            +==============+================+===============+==================+
+            | Yes          | Yes            | def           | Yes              |
+            +--------------+----------------+---------------+------------------+
+
+        :param red: the red baron source
+        :type red: :class:`redbaron.RedBaron`
+        :param index: position of the argument. ``0`` would mean to put the argument in the front.
+        :type index: :class:`int`
+        :param arg: the argument to add
+        :type arg: :class:`str`
+        :returns: the transformed source code
+        :rtype: :class:`redbaron.RedBaron`
+
+        Example:
+
+        .. doctest::
+
+            >>> import reddel_server
+            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
+            >>> src = \"\"\"def foo(arg1, arg2, kwarg2=1):
+            ...     arg2 = arg2 or ""
+            ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
+            ... \"\"\"
+            >>> print(p.add_arg(src, 3, "kwarg3=123"))
+            def foo(arg1, arg2, kwarg2=1, kwarg3=123):
+                arg2 = arg2 or ""
+                return arg2 + func(arg1, "arg2 arg2") + kwarg2
+            <BLANKLINE>
+
+        """
         red.arguments.insert(index, arg)
         return red
 
     @red_src(dump=False)
     def get_parents(self, red, row, column):
+        """Return a list of parents (scopes) relative to the given position
+
+        .. table::
+
+            +--------------+----------------+---------------+------------------+
+            | source input | outputs source | allowed types | only single node |
+            +==============+================+===============+==================+
+            | Yes          | No             | Any           | No               |
+            +--------------+----------------+---------------+------------------+
+
+        :param red: the red baron source
+        :type red: :class:`redbaron.RedBaron`
+        :param row: line number of the position to query (starting with 1)
+        :type row: :class:`int`
+        :param column: column number (starting with 1)
+        :type column: :class:`int`
+        :returns: a list of parents starting with the element at position first.
+        :rtype: :class:`list` of the parents.
+                A parent is represented by a :class:`tuple` of the
+                type, top-left, bottom-right position.
+                Each position is a :class:`tuple` of two :class:`int` for
+                row and column number.
+
+        .. doctest::
+
+            >>> import reddel_server
+            >>> import pprint
+            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
+            >>> src = \"\"\"def foo(arg1):
+            ...     arg2 = arg2 or ""
+            ...     if Ture:
+            ...         try:
+            ...             pass
+            ...         except:
+            ...             func(subfunc(arg1="asdf"))
+            ... \"\"\"
+            >>> pprint.pprint(p.get_parents(src, 7, 32))
+            [('string', (7, 31), (7, 36)),
+             ('call_argument', (7, 26), (7, 36)),
+             ('call', (7, 25), (7, 37)),
+             ('call_argument', (7, 18), (7, 37)),
+             ('call', (7, 17), (7, 38)),
+             ('atomtrailers', (7, 13), (7, 38)),
+             ('except', (6, 9), (8, 0)),
+             ('try', (4, 9), (8, 0)),
+             ('ifelseblock', (3, 5), (8, 0)),
+             ('def', (1, 1), (8, 0))]
+
+        """
         parents = []
         current = red.find_by_position((row, column))
         while current != red:

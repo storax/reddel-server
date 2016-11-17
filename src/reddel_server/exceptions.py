@@ -9,4 +9,5 @@ class RedBaseException(Exception):
 
 
 class ValidationException(RedBaseException):
+    """Raised when calling :class:`reddel_server.ValidatorInterface` and a source is invalid."""
     pass

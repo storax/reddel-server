@@ -15,6 +15,11 @@ logger = logging.getLogger('reddel')
 class Server(epc.server.EPCServer):
     """EPCServer that provides basic functionality.
 
+    This is a simple :class:`epc.server.EPCServer` that exposes methods for clients to call remotely.
+    You can use the python client to connect or call a method from within emacs.
+    The exposed methods are defined by a :class:`Provider <reddel_server.ProviderBase>`.
+    Call :meth:`reddel_server.Server.set_provider` to register the functions.
+
     If a provider can change it's methods dynamically,
     make sure to call :meth:`reddel_server.Server.set_provider` to reset the method cache.
     """
