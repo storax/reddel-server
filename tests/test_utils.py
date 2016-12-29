@@ -3,7 +3,6 @@ import logging
 
 import pytest
 
-import reddel_server
 from reddel_server import utils
 
 
@@ -46,24 +45,3 @@ def test_get_attr_from_dotted_path_raise_attr(mocker):
     with pytest.raises(AttributeError):
         utils.get_attr_from_dotted_path('test.this.path.NotExistentAttr')
     mockedimport.assert_called_once_with('test.this.path')
-
-
-def test_redwraps_add_attrs():
-    """Test that attibutes are added."""
-    @reddel_server.redwraps(None)
-    def foo():
-        pass  # pragma: nocover
-    assert all([hasattr(foo, attr) for attr in utils._RED_FUNC_ATTRS])
-
-
-def test_redwraps_attr_value():
-    """Test that attibutes values are transferred."""
-    def bar():
-        pass  # pragma: nocover
-
-    bar.red = 'test'
-
-    @reddel_server.redwraps(bar)
-    def foo():
-        pass  # pragma: nocover
-    assert all([getattr(foo, attr) == getattr(bar, attr, None) for attr in utils._RED_FUNC_ATTRS])

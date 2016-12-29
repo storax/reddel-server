@@ -6,7 +6,7 @@
 
    self
    builtin
-   reference/index
+   reference
    contributing
    authors
    changelog

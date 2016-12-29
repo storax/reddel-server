@@ -7,6 +7,9 @@ The API is divided into multiple domains:
 
   * `Server`_
   * `Providers`_
+
+    * `RedBaron Provider`_
+
   * `Validators`_
   * `Exceptions`_
 
@@ -30,7 +33,7 @@ Providers
 ---------
 
 :class:`Providers <reddel_server.ProviderBase>` are the heart of reddel. They provide methods that
-you can remotely call via the `Server`_.
+you can call remotely via the `Server`_.
 :meth:`list_methods <reddel_server.ProviderBase.list_methods>` can be used to get all available
 methods of a provider. You can also call it with a piece of source code to get all
 methods that can operate on it.
@@ -39,7 +42,7 @@ and providing some `Validators`_. There are more useful decorators listed below.
 
 The :class:`ChainedProvider <reddel_server.ChainedProvider>` is useful for combining multiple providers.
 The `Server`_ from the CLI uses such provider to combine
-a :class:`RedBaronProvider <reddel_server.RedBaronProvider>` and :class:`Provider <reddel_server.Provider>`.
+a :class:`RedBaronProvider <reddel_server.RedBaronProvider>` and any provider specified by the user.
 By calling :meth:`add_provider <reddel_server.ChainedProvider.add_provider>` (also remotely) with a dotted
 path you can add your own providers at runtime to extend reddel.
 
@@ -47,13 +50,36 @@ See:
 
   * :class:`ProviderBase <reddel_server.ProviderBase>`
   * :class:`ChainedProvider <reddel_server.ChainedProvider>`
+
++++++++++++++++++
+RedBaron Provider
++++++++++++++++++
+
+The :class:`RedBaronProvider <reddel_server.RedBaronProvider>` provides the built-in redbaron specific
+functionality.
+If you want to extend it or write your own provider, it's recommended to make use of the following decorators:
+
+  * :func:`red_src <reddel_server.red_src>`
+  * :func:`red_validate <reddel_server.red_validate>`
+  * :func:`red_type <reddel_server.red_type>`
+
+These decorators are the mini framework that allows the server to tell the client what actions are available for
+a given piece of code.
+
+There is also a small library with helper functions that might be useful when writing a provider:
+
+  * :func:`get_parents <reddel_server.get_parents>`
+  * :func:`get_node_of_region <reddel_server.get_node_of_region>`
+
+See:
+
   * :class:`RedBaronProvider <reddel_server.RedBaronProvider>`
   * :func:`redwraps <reddel_server.redwraps>`
   * :func:`red_src <reddel_server.red_src>`
   * :func:`red_validate <reddel_server.red_validate>`
   * :func:`red_type <reddel_server.red_type>`
-
-.. _Validators:
+  * :func:`get_parents <reddel_server.get_parents>`
+  * :func:`get_node_of_region <reddel_server.get_node_of_region>`
 
 ----------
 Validators
@@ -82,20 +108,24 @@ See:
   * :class:`RedBaseException <reddel_server.RedBaseException>`
   * :class:`ValidationException <reddel_server.ValidationException>`
 
+---
+API
+---
+
 """
 
 from __future__ import absolute_import
 
 from .exceptions import *
 from .provider import *
+from .redprovider import *
 from .server import *
-from .utils import *
 from .validators import *
 
 __all__ = (exceptions.__all__ +
            server.__all__ +
            provider.__all__ +
-           utils.__all__ +
-           validators.__all__)
+           validators.__all__ +
+           redprovider.__all__)
 
 __version__ = "0.1.0"
