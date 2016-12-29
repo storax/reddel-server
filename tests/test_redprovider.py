@@ -32,13 +32,28 @@ def test_get_parents_generator():
     assert isinstance(parentgen, types.GeneratorType)
 
 
+def test_get_node_of_region_bad_region():
+    """Test get_node_of_region with an invalid region"""
+    testsrc = redbaron.RedBaron("1+1")
+    start = reddel_server.Position(0, 1)
+    end = reddel_server.Position(1, 3)
+    assert testsrc == reddel_server.get_node_of_region(testsrc, start, end)
+
+def test_get_node_of_region_simple():
+    """Test get_node_of_region for when start and end are part of a simple expression"""
+    testsrc = redbaron.RedBaron("1+1")
+    start = reddel_server.Position(1, 1)
+    end = reddel_server.Position(1, 3)
+    expected = testsrc[0]
+    assert expected == reddel_server.get_node_of_region(testsrc, start, end)
+
 def test_get_node_of_region_same():
     """Test get_node_of_region for when start and end are the same nodes"""
     testsrc = redbaron.RedBaron("lambda: 1+1")
     start = reddel_server.Position(1, 1)
     end = reddel_server.Position(1, 2)
     expected = testsrc[0]
-    assert reddel_server.get_node_of_region(testsrc, start, end)
+    assert expected == reddel_server.get_node_of_region(testsrc, start, end)
 
 
 def test_get_node_of_region_same_level():
@@ -83,7 +98,7 @@ def test_get_node_of_region_slice_for_loop():
     assert expected == reddel_server.get_node_of_region(testsrc, start, end).dumps()
 
 
-def test_get_node_of_region_slice_list():
+def test_get_node_of_region_slice_list_declaration():
     """Test get_node_of_region for when the nodes slice a list declaration"""
     testsrc = redbaron.RedBaron("[1, 2, 3, 4, 5, 6]")
     start = reddel_server.Position(1, 8)
