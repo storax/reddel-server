@@ -1,152 +1,17 @@
 """RedBaron specific functionality for reddel"""
 from __future__ import absolute_import
 
-import collections
 import functools
 
 import redbaron
 
 from . import provider
+from . import redlib
 from . import validators
 
-__all__ = ['Position', 'Parent', 'get_parents', 'get_node_of_region', 'RedBaronProvider',
-           'red_src', 'red_type', 'red_validate', 'redwraps']
+__all__ = ['RedBaronProvider', 'red_src', 'red_validate', 'redwraps']
 
 _RED_FUNC_ATTRS = ['red', 'validators']
-
-
-class Position(collections.namedtuple('Position', ['row', 'column'])):
-    """Describes a position in the source code by line number and character position in that line.
-
-    :param row: the line number
-    :type row: :class:`int`
-    :param column: the position in the line
-    :type column: :class:`int`
-    """
-    __slots__ = ()
-
-
-class Parent(collections.namedtuple('Parent', ['identifier', 'start', 'end'])):
-    """Represents a node type with the bounding location.
-
-    :param identifier: the node type
-    :type identifier: :class:`str`
-    :param start: the position where the node begins in the code
-    :type start: :class:`Position`
-    :param end: the position where the node ends in the code
-    :type end: :class:`Position`
-    """
-    __slots__ = ()
-
-
-def get_parents(red):
-    """Yield the parents of the given red node
-
-    :param red: the red baron source
-    :type red: :class:`redbaron.base_nodes.Node` | :class:`redbaron.RedBaron`
-    :returns: each parent of the given node
-    :rtype: Generator[:class:`redbaron.base_nodes.Node`]
-    :raises: None
-    """
-    current = red.parent
-    while current:
-        yield current
-        current = current.parent
-
-
-def get_node_of_region(red, start, end):
-    """Get the node that contains the given region
-
-    :param red: the red baron source
-    :type red: :class:`redbaron.RedBaron`
-    :param start: position of the beginning of the region
-    :type start: :class:`Position`
-    :param end: position of the end of the region
-    :type end: :class:`Position`
-    :returns: the node that contains the region
-    :rtype: :class:`redbaron.base_nodes.Node`
-
-    First the nodes at start and end are gathered. Then the common parent is selected.
-    If the common parent is a list, the minimum slice is used.
-    This makes it easier for the user because he can partially select nodes and
-    still gets what he most likely intended to get.
-
-    For example if your region partially selects several lines in a for loop
-    and you want to extract them (``|`` shows the region bounds)::
-
-        for i in range(10):
-            a = 1 + 2
-            b |= 4
-            c = 5
-            d =| 7
-
-    then we expect to get back::
-
-        b = 4
-            c = 5
-            d = 7
-
-    Note that the leading tab is missing because it doesn't belong to the ``b = 4`` node.
-
-    .. doctest::
-
-        >>> import redbaron
-        >>> import reddel_server
-        >>> testsrc = ("for i in range(10):\\n"
-        ...            "    a = 1 + 2\\n"
-        ...            "    b = 4\\n"
-        ...            "    c = 5\\n"
-        ...            "    d = 7\\n")
-        >>> start = (3, 7)
-        >>> end = (5, 8)
-        >>> reddel_server.get_node_of_region(redbaron.RedBaron(testsrc), start, end).dumps()
-        'b = 4\\n    c = 5\\n    d = 7'
-
-    You can also partially select a list:
-
-    .. doctest::
-
-       >>> testsrc = "[1, 2, 3, 4, 5, 6]"
-       >>> start = (1, 8)  # "3"
-       >>> end = (1, 14)  # "5"
-       >>> reddel_server.get_node_of_region(redbaron.RedBaron(testsrc), start, end).dumps()
-       '3, 4, 5'
-
-    """
-    snode = red.find_by_position(start)
-    enode = red.find_by_position(end)
-    if snode == enode:
-        return snode
-    snodes = [snode] + list(get_parents(snode))
-    enodes = [enode] + list(get_parents(enode))
-    previous = red
-    for snode, enode in list(zip(reversed(snodes), reversed(enodes))):
-        # both list of parents should end with the root node
-        # so we iterate over the parents in reverse until we
-        # reach a parent that is not common.
-        # the previous parent then has to encapsulate both
-        if snode != enode:
-            if hasattr(previous, "node_list"):
-                # For lists we want the minimum slice of the list.
-                # E.g. the region spans over 2 functions in a big module
-                # the common parent would be the root node.
-                # We only want the part containing the 2 functions and not everything.
-                # Unfortunately we might loose some information if we slice the proxy list.
-                # When we use node_list then we keep things like new lines etc.
-                try:
-                    sindex = previous.node_list.index(snode)
-                    eindex = previous.node_list.index(enode)
-                except ValueError:
-                    # if one of the nodes is not in the list, it means it's not part of
-                    # previous value. E.g. previous is a function definition and snode
-                    # is part of the arguments while enode is part of the function body.
-                    # in that case we take the whole previous node (e.g. the whole function)
-                    pass
-                else:
-                    previous = redbaron.NodeList(previous.node_list[sindex:eindex + 1])
-            break
-        previous = snode
-    return previous
 
 
 def redwraps(towrap):
@@ -274,19 +139,20 @@ def red_validate(validators):
 
         import reddel_server
 
-        validator = reddel_server.BaronTypeValidator(["def"], single=True)
+        validator1 = reddel_server.SingleNodeValidator()
+        validator2 = reddel_server.TypeValidator(["def"])
         class MyProvider(reddel_server.ProviderBase):
             @reddel_server.red_src()
-            @reddel_server.red_validate([validator])
-            def foo(self, red):
+            @reddel_server.red_validate([validator1, validator2])
+            def foo(self, red, start, end):
                 assert red.type == 'def'
 
         provider = MyProvider(reddel_server.Server())
 
-        provider.foo("def bar(): pass")  # works
+        provider.foo("def bar(): pass", start=None, end=None)  # works
 
         try:
-            provider.foo("1+1")
+            provider.foo("1+1", start=None, end=None)
         except reddel_server.ValidationException:
             pass
         else:
@@ -300,44 +166,16 @@ def red_validate(validators):
     """
     def red_validate_dec(func):
         @redwraps(func)
-        def wrapped(self, red, *args, **kwargs):
+        def wrapped(self, red, start, end, *args, **kwargs):
             transformed = red
             for v in validators:
-                v(transformed)
-                transformed = v.transform(transformed)
-            return func(self, transformed, *args, **kwargs)
+                v(transformed, start, end)
+                transformed, start, end = v.transform(transformed, start, end)
+            return func(self, transformed, start, end, *args, **kwargs)
         wrapped.validators = wrapped.validators or []
         wrapped.validators.extend(validators)
         return wrapped
     return red_validate_dec
-
-
-def red_type(identifiers, single=True):
-    """Create decorator that checks if the root is identified by identifier
-
-    Simple shortcut for doing:
-
-    .. testsetup::
-
-        import reddel_server
-
-        identifiers = ['def', 'ifelseblock']
-        single=True
-
-    .. testcode::
-
-        reddel_server.red_validate([reddel_server.BaronTypeValidator(identifiers, single=single)])
-
-    See :func:`reddel_server.red_validate`.
-
-    :param identifiers: red baron node identifiers
-    :type identifiers: list of :class:`str`
-    :param single: expect a single node in the initial node list. Pass on the first node.
-    :type single: :class:`bool`
-    :returns: the decorator
-    :rtype: :data:`types.FunctionType`
-    """
-    return red_validate([validators.BaronTypeValidator(identifiers, single=single)])
 
 
 class RedBaronProvider(provider.ProviderBase):
@@ -349,11 +187,11 @@ class RedBaronProvider(provider.ProviderBase):
 
         .. table::
 
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | No             | Any           | No               |
-            +--------------+----------------+---------------+------------------+
+            +--------------+----------------+--------+------------------+---------------+
+            | source input | outputs source | region | only single node | allowed types |
+            +==============+================+========+==================+===============+
+            | Yes          | No             | No     | No               | Any           |
+            +--------------+----------------+--------+------------------+---------------+
 
         :param red: the red baron source
         :type red: :class:`redbaron.RedBaron`
@@ -387,20 +225,26 @@ class RedBaronProvider(provider.ProviderBase):
         return "\n".join(red.__help__(deep=deep, with_formatting=False))
 
     @red_src()
-    @red_type(["def"])
-    def rename_arg(self, red, oldname, newname):
+    @red_validate([validators.OptionalRegionValidator(),
+                   validators.SingleNodeValidator(),
+                   validators.TypeValidator(["def"])])
+    def rename_arg(self, red, start, end, oldname, newname):
         """Rename a argument
 
         .. table::
 
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | Yes            | def           | Yes              |
-            +--------------+----------------+---------------+------------------+
+            +--------------+----------------+----------+------------------+---------------+
+            | source input | outputs source | region   | only single node | allowed types |
+            +==============+================+==========+==================+===============+
+            | Yes          | Yes            | Optional | Yes              | def           |
+            +--------------+----------------+----------+------------------+---------------+
 
         :param red: the red baron source
         :type red: :class:`redbaron.RedBaron`
+        :param start: the start position of the selected region, if any.
+        :type start: :class:`reddel_server.Position` | ``None``
+        :param end: the end position of the selected region, if any.
+        :type end: :class:`reddel_server.Position` | ``None``
         :param oldname: name of the argument to rename
         :type oldname: :class:`str`
         :param newname: new name for the argument
@@ -418,7 +262,7 @@ class RedBaronProvider(provider.ProviderBase):
             ...     arg2 = arg2 or ""
             ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
             ... \"\"\"
-            >>> print(p.rename_arg(src, "arg2", "renamed"))
+            >>> print(p.rename_arg(src, None, None, "arg2", "renamed"))
             def foo(arg1, renamed, kwarg2=1):  # arg2
                 renamed = renamed or ""
                 return renamed + func(arg1, "arg2 arg2") + kwarg2
@@ -437,20 +281,26 @@ class RedBaronProvider(provider.ProviderBase):
         return red
 
     @red_src(dump=False)
-    @red_type(["def"])
-    def get_args(self, red):
+    @red_validate([validators.OptionalRegionValidator(),
+                   validators.SingleNodeValidator(),
+                   validators.TypeValidator(["def"])])
+    def get_args(self, red, start, end):
         """Return a list of args and their default value (if any) as source code
 
         .. table::
 
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | No             | def           | Yes              |
-            +--------------+----------------+---------------+------------------+
+            +--------------+----------------+----------+------------------+---------------+
+            | source input | outputs source | region   | only single node | allowed types |
+            +==============+================+==========+==================+===============+
+            | Yes          | No             | Optional | Yes              | def           |
+            +--------------+----------------+----------+------------------+---------------+
 
         :param red: the red baron source
         :type red: :class:`redbaron.RedBaron`
+        :param start: the start position of the selected region, if any.
+        :type start: :class:`reddel_server.Position` | ``None``
+        :param end: the end position of the selected region, if any.
+        :type end: :class:`reddel_server.Position` | ``None``
         :returns: list of argument name and default value.
         :rtype: :class:`list` of :class:`tuple` or :class:`str` and :class:`str` | ``None``
 
@@ -465,7 +315,7 @@ class RedBaronProvider(provider.ProviderBase):
             ...     arg2 = arg2 or ""
             ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
             ... \"\"\"
-            >>> p.get_args(src)
+            >>> p.get_args(src, None, None)
             [('arg1', None), ('arg2', None), ('kwarg1', 'None'), ('kwarg2', '1'), ('kwarg3', "'None'")]
 
         """
@@ -483,20 +333,26 @@ class RedBaronProvider(provider.ProviderBase):
         return args
 
     @red_src()
-    @red_type(["def"])
-    def add_arg(self, red, index, arg):
+    @red_validate([validators.OptionalRegionValidator(),
+                   validators.SingleNodeValidator(),
+                   validators.TypeValidator(["def"])])
+    def add_arg(self, red, start, end, index, arg):
         """Add a argument at the given index
 
         .. table::
 
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | Yes            | def           | Yes              |
-            +--------------+----------------+---------------+------------------+
+            +--------------+----------------+----------+------------------+---------------+
+            | source input | outputs source | region   | only single node | allowed types |
+            +==============+================+==========+==================+===============+
+            | Yes          | Yes            | Optional | Yes              | Yes           |
+            +--------------+----------------+----------+------------------+---------------+
 
         :param red: the red baron source
         :type red: :class:`redbaron.RedBaron`
+        :param start: the start position of the selected region, if any.
+        :type start: :class:`reddel_server.Position` | ``None``
+        :param end: the end position of the selected region, if any.
+        :type end: :class:`reddel_server.Position` | ``None``
         :param index: position of the argument. ``0`` would mean to put the argument in the front.
         :type index: :class:`int`
         :param arg: the argument to add
@@ -514,7 +370,7 @@ class RedBaronProvider(provider.ProviderBase):
             ...     arg2 = arg2 or ""
             ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
             ... \"\"\"
-            >>> print(p.add_arg(src, 3, "kwarg3=123"))
+            >>> print(p.add_arg(src, start=None, end=None, index=3, arg="kwarg3=123"))
             def foo(arg1, arg2, kwarg2=1, kwarg3=123):
                 arg2 = arg2 or ""
                 return arg2 + func(arg1, "arg2 arg2") + kwarg2
@@ -525,21 +381,24 @@ class RedBaronProvider(provider.ProviderBase):
         return red
 
     @red_src(dump=False)
-    def get_parents(self, red, pos):
+    @red_validate([validators.MandatoryRegionValidator()])
+    def get_parents(self, red, start, end):
         """Return a list of parents (scopes) relative to the given position
 
         .. table::
 
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | No             | Any           | No               |
-            +--------------+----------------+---------------+------------------+
+            +--------------+----------------+-----------+------------------+---------------+
+            | source input | outputs source | region    | only single node | allowed types |
+            +==============+================+===========+==================+===============+
+            | Yes          | No             | Mandatory | No               | Any           |
+            +--------------+----------------+-----------+------------------+---------------+
 
         :param red: the red baron source
         :type red: :class:`redbaron.RedBaron`
-        :param pos: the position to query
-        :type pos: :class:`Position`
+        :param start: the start position of the selected region.
+        :type start: :class:`reddel_server.Position`
+        :param end: the end position of the selected region.
+        :type end: :class:`reddel_server.Position`
         :returns: a list of parents starting with the element at position first.
         :rtype: :class:`list` of the parents.
                 A parent is represented by a :class:`Parent` of the
@@ -559,7 +418,7 @@ class RedBaronProvider(provider.ProviderBase):
             ...         except:
             ...             func(subfunc(arg1="asdf"))
             ... \"\"\"
-            >>> pprint.pprint(p.get_parents(src, reddel_server.Position(7, 32)))
+            >>> pprint.pprint(p.get_parents(src, reddel_server.Position(7, 32), reddel_server.Position(7, 32)))
             [Parent(identifier='string', start=Position(row=7, column=31), end=Position(row=7, column=36)),
              Parent(identifier='call_argument', start=..., end=...),
              Parent(identifier='call', start=..., end=...),
@@ -573,15 +432,15 @@ class RedBaronProvider(provider.ProviderBase):
 
         """
         parents = []
-        current = red.find_by_position(pos)
+        current = redlib.get_node_of_region(red, start, end)
         while current != red:
             region = current.absolute_bounding_box
             nodetype = current.type
-            tl = Position(*region.top_left.to_tuple())
-            br = Position(*region.bottom_right.to_tuple())
+            tl = redlib.Position(*region.top_left.to_tuple())
+            br = redlib.Position(*region.bottom_right.to_tuple())
             current = current.parent
             # if previous bounding box is the same take the parent higher in the hierachy
             if parents and parents[-1][1] == tl and parents[-1][2] == br:
                 parents.pop()
-            parents.append(Parent(nodetype, tl, br))
+            parents.append(redlib.Parent(nodetype, tl, br))
         return parents

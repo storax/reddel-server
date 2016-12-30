@@ -15,98 +15,6 @@ TEST_DECORATORS = [
 ]
 
 
-def test_get_parents():
-    """Test retrieving all parents from a node"""
-    testsrc = redbaron.RedBaron("def foo(): a = 1+1")
-    testnode = testsrc.find_by_position((1, 18))
-    parents = reddel_server.get_parents(testnode)
-    expected = [testnode.parent, testnode.parent.parent, testnode.parent.parent.parent,
-                testnode.parent.parent.parent.parent]
-    assert expected == list(parents)
-
-
-def test_get_parents_generator():
-    """Test that the function returns a generator"""
-    testsrc = redbaron.RedBaron("1+1")
-    parentgen = reddel_server.get_parents(testsrc)
-    assert isinstance(parentgen, types.GeneratorType)
-
-
-def test_get_node_of_region_bad_region():
-    """Test get_node_of_region with an invalid region"""
-    testsrc = redbaron.RedBaron("1+1")
-    start = reddel_server.Position(0, 1)
-    end = reddel_server.Position(1, 3)
-    assert testsrc == reddel_server.get_node_of_region(testsrc, start, end)
-
-def test_get_node_of_region_simple():
-    """Test get_node_of_region for when start and end are part of a simple expression"""
-    testsrc = redbaron.RedBaron("1+1")
-    start = reddel_server.Position(1, 1)
-    end = reddel_server.Position(1, 3)
-    expected = testsrc[0]
-    assert expected == reddel_server.get_node_of_region(testsrc, start, end)
-
-def test_get_node_of_region_same():
-    """Test get_node_of_region for when start and end are the same nodes"""
-    testsrc = redbaron.RedBaron("lambda: 1+1")
-    start = reddel_server.Position(1, 1)
-    end = reddel_server.Position(1, 2)
-    expected = testsrc[0]
-    assert expected == reddel_server.get_node_of_region(testsrc, start, end)
-
-
-def test_get_node_of_region_same_level():
-    """Test get_node_of_region for when the nodes for start and end are on the same level"""
-    testsrc = redbaron.RedBaron("1+1\n2*2")
-    start = reddel_server.Position(1, 2)
-    end = reddel_server.Position(2, 2)
-    assert reddel_server.get_node_of_region(testsrc, start, end).dumps() == testsrc.dumps()
-
-
-def test_get_node_of_region_different_level():
-    """Test get_node_of_region for when the nodes for start and end are on different levels"""
-    testsrc = redbaron.RedBaron("def foo(arg): a = 1+1")
-    start = reddel_server.Position(1, 9)  # "arg"
-    end = reddel_server.Position(1, 20)  # "+"
-    assert reddel_server.get_node_of_region(testsrc, start, end) == testsrc[0]  # the function definition
-
-
-def test_get_node_of_region_slice_list():
-    """Test get_node_of_region for when the nodes are only a slice in a node list"""
-    testsrc = redbaron.RedBaron("1+1\n"
-                                "a=1\n"
-                                "for i in range(10):\n"
-                                "    b=i\n"
-                                "c=3")
-    start = reddel_server.Position(2, 3)  # a="1"
-    end = reddel_server.Position(4, 6)  # b"="1
-    expected = redbaron.NodeList(testsrc.node_list[2:5])
-    assert expected.dumps() == reddel_server.get_node_of_region(testsrc, start, end).dumps()
-
-
-def test_get_node_of_region_slice_for_loop():
-    """Test get_node_of_region for when the nodes slice a for loop body"""
-    testsrc = redbaron.RedBaron("for i in range(10):\n"
-                                "    a = 1 + 2\n"
-                                "    b = 4\n"
-                                "    c = 5\n"
-                                "    d = 7\n")
-    start = reddel_server.Position(3, 7)
-    end = reddel_server.Position(5, 8)
-    expected = "b = 4\n    c = 5\n    d = 7"
-    assert expected == reddel_server.get_node_of_region(testsrc, start, end).dumps()
-
-
-def test_get_node_of_region_slice_list_declaration():
-    """Test get_node_of_region for when the nodes slice a list declaration"""
-    testsrc = redbaron.RedBaron("[1, 2, 3, 4, 5, 6]")
-    start = reddel_server.Position(1, 8)
-    end = reddel_server.Position(1, 14)
-    expected = "3, 4, 5"
-    assert expected == reddel_server.get_node_of_region(testsrc, start, end).dumps()
-
-
 def test_redwraps_add_attrs():
     """Test that attibutes are added."""
     @reddel_server.redwraps(None)
@@ -185,7 +93,7 @@ def test_red_src_dump_true():
 
 def test_red_validate_attr():
     """Test that the validators attribute is applied."""
-    validator = reddel_server.BaronTypeValidator(["def"], single=True)
+    validator = reddel_server.OptionalRegionValidator()
     @reddel_server.red_validate([validator])
     def foo(*args, **kwargs):
         pass  # pragma: nocover
@@ -195,37 +103,37 @@ def test_red_validate_attr():
 
 def test_red_validate_invalid():
     """Test that invalid values raise"""
-    validator = reddel_server.BaronTypeValidator(["def"])
+    validator = reddel_server.TypeValidator(['def'])
     @reddel_server.red_validate([validator])
-    def foo(self, src):
+    def foo(self, src, start, end):
         pass  # pragma: nocover
 
     src = redbaron.RedBaron("1+1")
     with pytest.raises(reddel_server.ValidationException):
-        foo(None, src)
+        foo(None, src, None, None)
 
 
 def test_red_validate_valid():
     """Test that valid values pass"""
-    validator = reddel_server.BaronTypeValidator(["def"], single=True)
+    validator = reddel_server.TypeValidator(["def"])
     @reddel_server.red_validate([validator])
-    def foo(self, src):
+    def foo(self, src, start, end):
         pass
 
     src = redbaron.RedBaron("def foo(): pass")
-    foo(None, src)
+    foo(None, src, None, None)
 
 
 def test_red_validate_transform():
     """Test that values get transformed"""
-    validator = reddel_server.BaronTypeValidator(["def"], single=True)
+    validator = reddel_server.SingleNodeValidator()
     src = redbaron.RedBaron("def foo(): pass")
 
     @reddel_server.red_validate([validator])
-    def foo(self, src):
+    def foo(self, src, start, end):
         return src
 
-    transformed = foo(None, src)
+    transformed = foo(None, src, None, None)
     assert src[0] == transformed
 
 
@@ -265,7 +173,7 @@ def test_RedBaronProvider_rename_arg(redbaronprovider):
     newarg = 1 + newarg
     return newarg\n"""
 
-    assert redbaronprovider.rename_arg(src, "arg1", "newarg") == expected
+    assert redbaronprovider.rename_arg(src, None, None, "arg1", "newarg") == expected
 
 
 def test_RedBaronProvider_rename_arg_raise(redbaronprovider):
@@ -276,7 +184,7 @@ def test_RedBaronProvider_rename_arg_raise(redbaronprovider):
     return arg1"""
 
     with pytest.raises(ValueError):
-        redbaronprovider.rename_arg(src, "arg", "newarg")
+        redbaronprovider.rename_arg(src, None, None, "arg", "newarg")
 
 
 def test_RedBaronProvider_get_args(redbaronprovider):
@@ -288,13 +196,13 @@ def test_RedBaronProvider_get_args(redbaronprovider):
                 ("kwarg2", '3'),
                 ("kwarg3", "None")]
 
-    assert redbaronprovider.get_args(src) == expected
+    assert redbaronprovider.get_args(src, None, None) == expected
 
 
 def test_RedBaronProvider_add_arg(redbaronprovider):
     src = "def foo(arg1): pass\n"
     expected = "def foo(arg1, kwarg2=None): pass\n"
-    assert redbaronprovider.add_arg(src, 1, "kwarg2=None") == expected
+    assert expected == redbaronprovider.add_arg(src, None, None, 1, "kwarg2=None")
 
 
 def test_RedBaronProvider_get_parents(redbaronprovider):
@@ -310,4 +218,5 @@ def test_RedBaronProvider_get_parents(redbaronprovider):
                 ('def', (3, 9), (6, 0)),
                 ('ifelseblock', (2, 5), (6, 0)),
                 ('def', (1, 1), (6, 0))]
-    assert redbaronprovider.get_parents(src, reddel_server.Position(5, 21)) == expected
+    result = redbaronprovider.get_parents(src, reddel_server.Position(5, 21), reddel_server.Position(5, 21))
+    assert expected == result

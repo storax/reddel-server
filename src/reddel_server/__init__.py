@@ -61,7 +61,6 @@ If you want to extend it or write your own provider, it's recommended to make us
 
   * :func:`red_src <reddel_server.red_src>`
   * :func:`red_validate <reddel_server.red_validate>`
-  * :func:`red_type <reddel_server.red_type>`
 
 These decorators are the mini framework that allows the server to tell the client what actions are available for
 a given piece of code.
@@ -77,7 +76,6 @@ See:
   * :func:`redwraps <reddel_server.redwraps>`
   * :func:`red_src <reddel_server.red_src>`
   * :func:`red_validate <reddel_server.red_validate>`
-  * :func:`red_type <reddel_server.red_type>`
   * :func:`get_parents <reddel_server.get_parents>`
   * :func:`get_node_of_region <reddel_server.get_node_of_region>`
 
@@ -89,12 +87,19 @@ Validators are used to get all methods compatible on processing a given source.
 E.g. if the source is a function, reddel can report to Emacs which functions can be applied to
 functions and Emacs can use the information to dynamically build a UI.
 
-Validators can transform the source as well (see :meth:`transform <reddel_server.BaronTypeValidator.transform>`).
+Validators can transform the source as well.
+The transformed source is passed onto the next validator when you use :func:`reddel_server.red_validate`.
+All validators provided by ``reddel_server`` can be used as mix-ins.
+When you create your own validator and you inherit from multiple builtin ones then
+they are effectively combined since all of them perform the appropriate super call.
 
 See:
 
   * :class:`ValidatorInterface <reddel_server.ValidatorInterface>`
-  * :class:`BaronTypeValidator <reddel_server.BaronTypeValidator>`
+  * :class:`OptionalRegionValidator <reddel_server.OptionalRegionValidator>`
+  * :class:`MandatoryRegionValidator <reddel_server.MandatoryRegionValidator>`
+  * :class:`SingleNodeValidator <reddel_server.SingleNodeValidator>`
+  * :class:`TypeValidator <reddel_server.TypeValidator>`
 
 ----------
 Exceptions
@@ -118,6 +123,7 @@ from __future__ import absolute_import
 
 from .exceptions import *
 from .provider import *
+from .redlib import *
 from .redprovider import *
 from .server import *
 from .validators import *
@@ -126,6 +132,7 @@ __all__ = (exceptions.__all__ +
            server.__all__ +
            provider.__all__ +
            validators.__all__ +
-           redprovider.__all__)
+           redprovider.__all__ +
+           redlib.__all__)
 
 __version__ = "0.1.0"
