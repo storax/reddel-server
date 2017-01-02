@@ -129,4 +129,4 @@ __all__ = (server.__all__ +
            redprovider.__all__ +
            redlib.__all__)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
