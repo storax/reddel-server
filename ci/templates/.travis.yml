@@ -36,3 +36,12 @@ notifications:
   email:
     on_success: never
     on_failure: always
+deploy:
+  provider: pypi
+  user: storax
+  distributions: sdist bdist_wheel
+  password:
+    secure: k6/sCrTgy3IHcUIQCEb60NN02AeK4nXcYwc+52Z8pGh/MMNobxT+eQREKhR25oaDbmb8pzFHh5P2pueYUfN9MjyUAMw5Aj+sFWEeXN5SyxSyJViHbdz902+Hqfj2hFl/1usJTe3/WUBlwywnZypI6mSbBhwGHxVV9J5k6AlUVYhAkFeigAwTq1Kc38YozVIbbudqVH2Ae60V1a6bMznOhjWR+HT1Zl2cRlYFSDd87ZgG9ZjpJJWGRc6igR+lt+je2OrRhfCsduaPAn/039M1hNGbevQyPnWTiWOyILM1U2KS9ovC+JXL+USlYZs3g6mm1GcEKA0ksUCP/gu6DSxf04srHFrZYBtTTJn54cvE57P5xNkpHtFB8bqRREOYQ5tk2h+QOUSw9keNg54WSm694nzS6vqXWHOl7al5HvH4R60eo146KSwk7lodw+zDY+bpTk7vyczADOrSMO5Ww+wwsXV+fVo1mTDW5cstyg6TLBPkhFiPHWgHYuwqB8JM+qEIT9ea8sXgyk374ufoEWZFUm/khC1Fsnq/Dly7j5XJyhFCZGs64wCNysDhg3GhsSmT5q9n5mJvgqVqiUyiN4VWv7yVnJ4yQbyPHOeQOymJtnRFpiB6oHPbppv8iQLtCY4DY2tZkUk5eQfp9eEp4Qjyz31dDeeI+bAJgi6Qal+F2Fg=
+  on:
+    tags: true
+    repo: storax/reddel-server
