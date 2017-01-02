@@ -6,12 +6,16 @@ import abc
 import redbaron
 import six
 
-from . import exceptions
 from . import redlib
 
 
 __all__ = ['ValidatorInterface', 'OptionalRegionValidator', 'MandatoryRegionValidator',
-           'SingleNodeValidator', 'TypeValidator']
+           'SingleNodeValidator', 'TypeValidator', 'ValidationException']
+
+
+class ValidationException(Exception):
+    """Raised when calling :class:`reddel_server.ValidatorInterface` and a source is invalid."""
+    pass
 
 
 class ValidatorInterface(six.with_metaclass(abc.ABCMeta, object)):
@@ -150,7 +154,7 @@ class MandatoryRegionValidator(ValidatorInterface):
         """
         super(MandatoryRegionValidator, self).__call__(red, start, end)
         if not (start and end):
-            raise exceptions.ValidationException("No region specified.")
+            raise ValidationException("No region specified.")
 
 
 class SingleNodeValidator(ValidatorInterface):
@@ -193,7 +197,7 @@ class SingleNodeValidator(ValidatorInterface):
         if start and end:
             red = redlib.get_node_of_region(red, start, end)
         if isinstance(red, (redbaron.NodeList, redbaron.ProxyList)) and len(red) > 1:
-            raise exceptions.ValidationException("Expected single node but got: %s" % red)
+            raise ValidationException("Expected single node but got: %s" % red)
 
     def transform(self, red, start=None, end=None):
         """Extract the single node red is a list
@@ -269,5 +273,5 @@ class TypeValidator(ValidatorInterface):
         for node in red:
             identifiers = node.generate_identifiers()
             if not any(i in identifiers for i in self.identifiers):
-                raise exceptions.ValidationException("Expected identifier %s but got %s" %
-                                                     (self.identifiers, identifiers))
+                raise ValidationException("Expected identifier %s but got %s" %
+                                          (self.identifiers, identifiers))

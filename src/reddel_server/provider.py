@@ -1,14 +1,17 @@
 """Provider expose functionality to a reddel server"""
 from __future__ import absolute_import
 
+import importlib
+import logging
 import types
 
 import redbaron
 
-from . import exceptions
-from . import utils
+from . import validators
 
 __all__ = ['ProviderBase', 'ChainedProvider']
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderBase(object):
@@ -26,7 +29,7 @@ class ProviderBase(object):
         class MyProvider(reddel_server.ProviderBase):
             def exposed(self):
                 print("I'm exposed")
-            def private(self):
+            def _private(self):
                 print("I'm private")
 
     .. testcode::
@@ -34,6 +37,9 @@ class ProviderBase(object):
         server = reddel_server.Server()
         provider = MyProvider(server)
         server.set_provider(provider)
+        methods = provider.list_methods()
+        assert "exposed" in methods
+        assert "_private" not in methods
 
     When starting reddel from the command line via the command ``reddel``,
     it's automatically setup with a :class:`reddel_server.ChainedProvider`,
@@ -79,7 +85,7 @@ class ProviderBase(object):
                     for v in (attr.validators or []):
                         try:
                             v(src)
-                        except exceptions.ValidationException:
+                        except validators.ValidationException:
                             break
                     else:
                         d[attrname] = attr
@@ -97,7 +103,7 @@ class ProviderBase(object):
         This feature might be handy to dynamically build UIs that adapt to the current context.
 
         To write your own methods that can be filtered in the same way, use the
-        :func:`reddel_server.red_validate` or :func:`reddel_server.red_type` decorators.
+        :func:`reddel_server.red_validate` decorators.
 
         :param source: if ``src`` return only compatible methods
         :type source: :class:`str`
@@ -159,7 +165,7 @@ class ChainedProvider(ProviderBase):
 
     This is the provider used by the command line client to combine
     :class:`reddel_server.RedBaronProvider` with third party providers.
-    :meth:`reddel_server.ChainedProvider.add_provider` is a simple function
+    :meth:`reddel_server.ChainedProvider.add_provider` is a function
     to provide a simple plug-in system.
 
     Example:
@@ -184,6 +190,7 @@ class ChainedProvider(ProviderBase):
     Methods are cached in :data:`reddel_server.ChainedProvider._cached_methods`.
     :meth:`reddel_server.ChainedProvider._get_methods` will use the cached value unless it's ``None``.
     :meth:`reddel_server.ChainedProvider.add_provider` will reset the cache.
+    Keep that in mind when building dynamic providers because the cache might become invalid.
     """
     def __init__(self, server, providers=None):
         """Initialize a provider which acts as a combination of the given
@@ -232,7 +239,7 @@ class ChainedProvider(ProviderBase):
 
         This will invalidate the cached methods on this instance and also on the server.
         """
-        providercls = utils.get_attr_from_dotted_path(dotted_path)
+        providercls = get_attr_from_dotted_path(dotted_path)
         self._providers.insert(0, providercls(self.server))
         self._cached_methods = None
         self.server._set_funcs()  # to reset the cache of the server
@@ -254,3 +261,23 @@ class ChainedProvider(ProviderBase):
         else:
             methods = self._cached_methods
         return methods
+
+
+def get_attr_from_dotted_path(path):
+    """Return the imported object from the given path.
+
+    :param path: a dotted path where the last segement is the attribute of the module to return.
+                 E.g. ``mypkg.mymod.MyClass``.
+    :type path: str
+    :returns: the object specified by the path
+    :raises: :class:`ImportError`, :class:`AttributeError`, :class:`ValueError`
+    """
+    logger.debug("importing %s", path)
+    if '.' not in path:
+        msg = "Expected a dotted path (e.g. 'mypkg.mymod.MyClass') but got {0!r}".format(path)
+        raise ValueError(msg)
+
+    providermodname, providerclsname = path.rsplit('.', 1)
+    providermod = importlib.import_module(providermodname)
+
+    return getattr(providermod, providerclsname)

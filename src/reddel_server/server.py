@@ -9,7 +9,7 @@ import six
 
 __all__ = ['Server']
 
-logger = logging.getLogger('reddel')
+logger = logging.getLogger(__name__)
 
 
 class Server(epc.server.EPCServer):

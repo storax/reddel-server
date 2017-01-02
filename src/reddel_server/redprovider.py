@@ -92,7 +92,6 @@ def red_src(dump=True):
     that can be dumped. This is useful for taking a source as argument, transforming it and returning it back
     so that it the editor can replace the original source:
 
-
     .. doctest::
 
         >>> import redbaron
@@ -436,11 +435,11 @@ class RedBaronProvider(provider.ProviderBase):
         while current != red:
             region = current.absolute_bounding_box
             nodetype = current.type
-            tl = redlib.Position(*region.top_left.to_tuple())
-            br = redlib.Position(*region.bottom_right.to_tuple())
+            start = redlib.Position(*region.top_left.to_tuple())
+            end = redlib.Position(*region.bottom_right.to_tuple())
             current = current.parent
             # if previous bounding box is the same take the parent higher in the hierachy
-            if parents and parents[-1][1] == tl and parents[-1][2] == br:
+            if parents and parents[-1].start == start and parents[-1].end == end:
                 parents.pop()
-            parents.append(redlib.Parent(nodetype, tl, br))
+            parents.append(redlib.Parent(nodetype, start, end))
         return parents

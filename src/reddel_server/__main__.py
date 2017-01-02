@@ -1,5 +1,5 @@
 """
-Entrypoint module, in case you use `python -mreddel_server`.
+Entrypoint module, in case you use ``python -m reddel_server``.
 """
 from reddel_server.cli import main
 

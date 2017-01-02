@@ -2,6 +2,7 @@ import pytest
 import redbaron
 
 import reddel_server
+from reddel_server import provider
 
 
 class SpamProvider(reddel_server.ProviderBase):
@@ -166,3 +167,44 @@ def test_ChainedProvider_add_provider_override(foobarprovider):
     foobarprovider.add_provider("test_provider.SpamProvider")
     assert foobarprovider._get_method("foo")() == "spammy foo", \
         "Adding a provider should override existing clashing methods."
+
+
+def mockimport(mocker, sideeffect=None):
+    class MyClass(object):
+        pass
+
+    importmock = mocker.Mock()
+    modmock = mocker.Mock(object)
+    modmock.MyClass = MyClass
+    importmock.return_value = modmock
+    if sideeffect:
+        importmock.side_effect = sideeffect
+
+    return mocker.patch('importlib.import_module', importmock)
+
+
+def test_get_attr_from_dotted_path(mocker):
+    """Test the function call importlib correctly"""
+    mockedimport = mockimport(mocker)
+    result = provider.get_attr_from_dotted_path('test.this.path.MyClass')
+    mockedimport.assert_called_once_with('test.this.path')
+    assert result is mockedimport('test.this.path').MyClass
+
+
+def test_get_attr_from_dotted_path_raise_import(mocker):
+    mockedimport = mockimport(mocker, ImportError("No module named 'UNKNOWNMODULE'"))
+    with pytest.raises(ImportError):
+        provider.get_attr_from_dotted_path('UNKNOWNMODULE.stuff')
+    mockedimport.assert_called_once_with('UNKNOWNMODULE')
+
+
+def test_get_attr_from_dotted_path_raise_value(mocker):
+    with pytest.raises(ValueError):
+        provider.get_attr_from_dotted_path('UNKNOWNMODULE')
+
+
+def test_get_attr_from_dotted_path_raise_attr(mocker):
+    mockedimport = mockimport(mocker)
+    with pytest.raises(AttributeError):
+        provider.get_attr_from_dotted_path('test.this.path.NotExistentAttr')
+    mockedimport.assert_called_once_with('test.this.path')
