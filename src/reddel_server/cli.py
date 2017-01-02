@@ -25,6 +25,7 @@ from . import provider
 logger = logging.getLogger(__name__)
 
 
+# If you change any arguments, make sure to update the readme documentation.
 @click.command()
 @click.option('--address', type=str, default='localhost', help="address to bind the server to")
 @click.option('--port', type=int, default=0, help="address to bind the server to")

@@ -301,7 +301,7 @@ class RedBaronProvider(provider.ProviderBase):
         :param end: the end position of the selected region, if any.
         :type end: :class:`reddel_server.Position` | ``None``
         :returns: list of argument name and default value.
-        :rtype: :class:`list` of :class:`tuple` or :class:`str` and :class:`str` | ``None``
+        :rtype: :class:`list` of :class:`tuple` with :class:`str` and :class:`str` | ``None`` in it.
 
         The default value is always a string, except for arguments without one which will be
         represented as None.
