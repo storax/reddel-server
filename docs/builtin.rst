@@ -7,19 +7,22 @@ Some functions that work on code have a table like this in the docstring:
 
 .. table::
 
-    +--------------+----------------+---------------+------------------+
-    | source input | outputs source | allowed types | only single node |
-    +==============+================+===============+==================+
-    | Yes          | No             | Any           | No               |
-    +--------------+----------------+---------------+------------------+
+    +--------------+----------------+-----------+------------------+---------------+
+    | source input | outputs source | region    | only single node | allowed types |
+    +==============+================+===========+==================+===============+
+    | Yes          | No             | Mandatory | No               | Any           |
+    +--------------+----------------+-----------+------------------+---------------+
 
 - ``source input``: ``Yes`` means, that the function expects source code as first argument
 - ``outputs source``: ``Yes``  means that the function returns source code back
+- ``region``: ``No`` means that this function does not accept regions. ``Optional`` means that
+  if a region is specified, only the region will be considered. If no region is specified, the whole
+  source is used. ``Mandatory`` always requires a region.
+- ``only single node``: ``Yes`` means only a single node on root level is allowed.
 - ``allowed types``: a list of allowed identifiers on root level. E.g. ``def`` means only function
   definitions are valid.
-- ``only single node``: ``Yes`` means only a single node on root level is allowed.
 
-See :func:`reddel_server.red_src`, :func:`reddel_server.red_validate`, :func:`reddel_server.red_type`.
+See :func:`reddel_server.red_src`, :func:`reddel_server.red_validate`.
 
 Basic Functions
 ===============

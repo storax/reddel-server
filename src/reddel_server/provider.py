@@ -1,172 +1,17 @@
-"""Provide functionality to reddel"""
+"""Provider expose functionality to a reddel server"""
 from __future__ import absolute_import
 
+import importlib
+import logging
 import types
 
 import redbaron
 
-from . import exceptions
-from . import utils
 from . import validators
 
-__all__ = ['ProviderBase', 'ChainedProvider', 'RedBaronProvider',
-           'red_src', 'red_type', 'red_validate']
+__all__ = ['ProviderBase', 'ChainedProvider']
 
-
-def red_src(dump=True):
-    """Create decorator that converts the first argument into a red baron source
-
-    :param dump: if True, dump the return value from the wrapped function.
-                 Expects the return type to be a :class:`redbaron.RedBaron` object.
-    :type dump: :class:`bool`
-    :returns: the decorator
-    :rtype: :data:`types.FunctionType`
-
-    Example:
-
-    .. testcode::
-
-        import redbaron
-        import reddel_server
-
-        class MyProvider(reddel_server.ProviderBase):
-            @reddel_server.red_src(dump=False)
-            def inspect_red(self, red):
-                assert isinstance(red, redbaron.RedBaron)
-                red.help()
-
-        MyProvider(reddel_server.Server()).inspect_red("1+1")
-
-    .. testoutput::
-
-        0 -----------------------------------------------------
-        BinaryOperatorNode()
-          # identifiers: binary_operator, binary_operator_, binaryoperator, binaryoperatornode
-          value='+'
-          first ->
-            IntNode()
-              # identifiers: int, int_, intnode
-              value='1'
-          second ->
-            IntNode()
-              # identifiers: int, int_, intnode
-              value='1'
-
-    By default the return value is expected to be a transformed :class:`redbaron.RedBaron` object
-    that can be dumped. This is useful for taking a source as argument, transforming it and returning it back
-    so that it the editor can replace the original source:
-
-
-    .. doctest::
-
-        >>> import redbaron
-        >>> import reddel_server
-
-        >>> class MyProvider(reddel_server.ProviderBase):
-        ...     @reddel_server.red_src(dump=True)
-        ...     def echo(self, red):
-        ...         assert isinstance(red, redbaron.RedBaron)
-        ...         return red
-
-        >>> MyProvider(reddel_server.Server()).echo("1+1")
-        '1+1'
-
-    """
-    def red_src_dec(func):
-        @utils.redwraps(func)
-        def wrapped(self, src, *args, **kwargs):
-            red = redbaron.RedBaron(src)
-            retval = func(self, red, *args, **kwargs)
-            if dump and retval:
-                retval = retval.dumps()
-            return retval
-        return wrapped
-    return red_src_dec
-
-
-def red_validate(validators):
-    """Create decorator that adds the given validators to the wrapped function
-
-    :param validators: the validators
-    :type validators: :class:`reddel_server.ValidatorInterface`
-
-    Validators can be used to provide sanity checks.
-    :meth:`reddel_server.ProviderBase.list_methods` uses them to filter
-    out methods that are incompatible with the given input, which can be used
-    to build dynamic UIs.
-
-    To use this validator is very simple.
-    Create one or more validator instances (have to inherit from :class:`reddel_server.ValidatorInterface`)
-    and provide them as the argument:
-
-    .. testcode::
-
-        import reddel_server
-
-        validator = reddel_server.BaronTypeValidator(["def"], single=True)
-        class MyProvider(reddel_server.ProviderBase):
-            @reddel_server.red_src()
-            @reddel_server.red_validate([validator])
-            def foo(self, red):
-                assert red.type == 'def'
-
-        provider = MyProvider(reddel_server.Server())
-
-        provider.foo("def bar(): pass")  # works
-
-        try:
-            provider.foo("1+1")
-        except reddel_server.ValidationException:
-            pass
-        else:
-            assert False, "Validator should have raised"
-
-    On top of that validators also can implement a :meth:`reddel_server.ValidatorInterface.transform`
-    function to transform the red source on the way down.
-    The transformed value is passed to the next validator and eventually into the function.
-
-    See `Validators`_.
-    """
-    def red_validate_dec(func):
-        @utils.redwraps(func)
-        def wrapped(self, red, *args, **kwargs):
-            transformed = red
-            for v in validators:
-                v(transformed)
-                transformed = v.transform(transformed)
-            return func(self, transformed, *args, **kwargs)
-        wrapped.validators = wrapped.validators or []
-        wrapped.validators.extend(validators)
-        return wrapped
-    return red_validate_dec
-
-
-def red_type(identifiers, single=True):
-    """Create decorator that checks if the root is identified by identifier
-
-    Simple shortcut for doing:
-
-    .. testsetup::
-
-        import reddel_server
-
-        identifiers = ['def', 'ifelseblock']
-        single=True
-
-    .. testcode::
-
-        reddel_server.red_validate([reddel_server.BaronTypeValidator(identifiers, single=single)])
-
-    See :func:`reddel_server.red_validate`.
-
-    :param identifiers: red baron node identifiers
-    :type identifiers: list of :class:`str`
-    :param single: expect a single node in the initial node list. Pass on the first node.
-    :type single: :class:`bool`
-    :returns: the decorator
-    :rtype: :data:`types.FunctionType`
-    """
-    return red_validate([validators.BaronTypeValidator(identifiers, single=single)])
+logger = logging.getLogger(__name__)
 
 
 class ProviderBase(object):
@@ -184,7 +29,7 @@ class ProviderBase(object):
         class MyProvider(reddel_server.ProviderBase):
             def exposed(self):
                 print("I'm exposed")
-            def private(self):
+            def _private(self):
                 print("I'm private")
 
     .. testcode::
@@ -192,6 +37,9 @@ class ProviderBase(object):
         server = reddel_server.Server()
         provider = MyProvider(server)
         server.set_provider(provider)
+        methods = provider.list_methods()
+        assert "exposed" in methods
+        assert "_private" not in methods
 
     When starting reddel from the command line via the command ``reddel``,
     it's automatically setup with a :class:`reddel_server.ChainedProvider`,
@@ -237,7 +85,7 @@ class ProviderBase(object):
                     for v in (attr.validators or []):
                         try:
                             v(src)
-                        except exceptions.ValidationException:
+                        except validators.ValidationException:
                             break
                     else:
                         d[attrname] = attr
@@ -255,7 +103,7 @@ class ProviderBase(object):
         This feature might be handy to dynamically build UIs that adapt to the current context.
 
         To write your own methods that can be filtered in the same way, use the
-        :func:`reddel_server.red_validate` or :func:`reddel_server.red_type` decorators.
+        :func:`reddel_server.red_validate` decorators.
 
         :param source: if ``src`` return only compatible methods
         :type source: :class:`str`
@@ -317,7 +165,7 @@ class ChainedProvider(ProviderBase):
 
     This is the provider used by the command line client to combine
     :class:`reddel_server.RedBaronProvider` with third party providers.
-    :meth:`reddel_server.ChainedProvider.add_provider` is a simple function
+    :meth:`reddel_server.ChainedProvider.add_provider` is a function
     to provide a simple plug-in system.
 
     Example:
@@ -342,6 +190,7 @@ class ChainedProvider(ProviderBase):
     Methods are cached in :data:`reddel_server.ChainedProvider._cached_methods`.
     :meth:`reddel_server.ChainedProvider._get_methods` will use the cached value unless it's ``None``.
     :meth:`reddel_server.ChainedProvider.add_provider` will reset the cache.
+    Keep that in mind when building dynamic providers because the cache might become invalid.
     """
     def __init__(self, server, providers=None):
         """Initialize a provider which acts as a combination of the given
@@ -390,7 +239,7 @@ class ChainedProvider(ProviderBase):
 
         This will invalidate the cached methods on this instance and also on the server.
         """
-        providercls = utils.get_attr_from_dotted_path(dotted_path)
+        providercls = get_attr_from_dotted_path(dotted_path)
         self._providers.insert(0, providercls(self.server))
         self._cached_methods = None
         self.server._set_funcs()  # to reset the cache of the server
@@ -402,259 +251,33 @@ class ChainedProvider(ProviderBase):
         :type source: :class:`str`
         :returns: dict method names and methods
         """
-        if self._cached_methods is None:
-            self._cached_methods = {}
+        methods = {}
+        if src or self._cached_methods is None:
             for p in reversed(self._providers):
-                self._cached_methods.update(p._get_methods(src=src))
-            self._cached_methods.update(super(ChainedProvider, self)._get_methods(src=src))
-        return self._cached_methods
-
-
-class RedBaronProvider(ProviderBase):
-    """Provider for inspecting and transforming source code via redbaron."""
-
-    @red_src(dump=False)
-    def analyze(self, red, deep=2, with_formatting=False):
-        """Return the red baron help string for the given source
-
-        .. table::
-
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | No             | Any           | No               |
-            +--------------+----------------+---------------+------------------+
-
-        :param red: the red baron source
-        :type red: :class:`redbaron.RedBaron`
-        :param deep: how deep the nodes get printed
-        :type deep: :class:`int`
-        :param with_formatting: also analyze formatting nodes
-        :type with_formatting: :class:`bool`
-        :returns: the help text
-        :rtype: :class:`str`
-
-        Example:
-
-        .. doctest::
-
-            >>> import reddel_server
-            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
-            >>> print(p.analyze("1+1"))
-            BinaryOperatorNode()
-              # identifiers: binary_operator, binary_operator_, binaryoperator, binaryoperatornode
-              value='+'
-              first ->
-                IntNode()
-                  # identifiers: int, int_, intnode
-                  value='1'
-              second ->
-                IntNode()
-                  # identifiers: int, int_, intnode
-                  value='1'
-
-        """
-        return "\n".join(red.__help__(deep=deep, with_formatting=False))
-
-    @red_src()
-    @red_type(["def"])
-    def rename_arg(self, red, oldname, newname):
-        """Rename a argument
-
-        .. table::
-
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | Yes            | def           | Yes              |
-            +--------------+----------------+---------------+------------------+
-
-        :param red: the red baron source
-        :type red: :class:`redbaron.RedBaron`
-        :param oldname: name of the argument to rename
-        :type oldname: :class:`str`
-        :param newname: new name for the argument
-        :type newname: :class:`str`
-        :returns: the transformed source code
-        :rtype: :class:`redbaron.RedBaron`
-
-        Example:
-
-        .. doctest::
-
-            >>> import reddel_server
-            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
-            >>> src = \"\"\"def foo(arg1, arg2, kwarg2=1):  # arg2
-            ...     arg2 = arg2 or ""
-            ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
-            ... \"\"\"
-            >>> print(p.rename_arg(src, "arg2", "renamed"))
-            def foo(arg1, renamed, kwarg2=1):  # arg2
-                renamed = renamed or ""
-                return renamed + func(arg1, "arg2 arg2") + kwarg2
-            <BLANKLINE>
-        """
-        for arg in red.arguments:
-            if arg.target.value == oldname:
-                arg.target.value = newname
-                break
+                methods.update(p._get_methods(src=src))
+            methods.update(super(ChainedProvider, self)._get_methods(src=src))
+            if self._cached_methods is None:
+                self._cached_methods = methods
         else:
-            raise ValueError("Expected argument %s to be one of %s"
-                             % (oldname, [arg.target.value for arg in red.arguments]))
-        namenodes = red.value.find_all("name", value=oldname)
-        for node in namenodes:
-            node.value = newname
-        return red
+            methods = self._cached_methods
+        return methods
 
-    @red_src(dump=False)
-    @red_type(["def"])
-    def get_args(self, red):
-        """Return a list of args and their default value (if any) as source code
 
-        .. table::
+def get_attr_from_dotted_path(path):
+    """Return the imported object from the given path.
 
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | No             | def           | Yes              |
-            +--------------+----------------+---------------+------------------+
+    :param path: a dotted path where the last segement is the attribute of the module to return.
+                 E.g. ``mypkg.mymod.MyClass``.
+    :type path: str
+    :returns: the object specified by the path
+    :raises: :class:`ImportError`, :class:`AttributeError`, :class:`ValueError`
+    """
+    logger.debug("importing %s", path)
+    if '.' not in path:
+        msg = "Expected a dotted path (e.g. 'mypkg.mymod.MyClass') but got {0!r}".format(path)
+        raise ValueError(msg)
 
-        :param red: the red baron source
-        :type red: :class:`redbaron.RedBaron`
-        :returns: list of argument name and default value.
-        :rtype: :class:`list` of :class:`tuple` or :class:`str` and :class:`str` | ``None``
+    providermodname, providerclsname = path.rsplit('.', 1)
+    providermod = importlib.import_module(providermodname)
 
-        The default value is always a string, except for arguments without one which will be
-        represented as None.
-
-        .. doctest::
-
-            >>> import reddel_server
-            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
-            >>> src = \"\"\"def foo(arg1, arg2, kwarg1=None, kwarg2=1, kwarg3='None'):
-            ...     arg2 = arg2 or ""
-            ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
-            ... \"\"\"
-            >>> p.get_args(src)
-            [('arg1', None), ('arg2', None), ('kwarg1', 'None'), ('kwarg2', '1'), ('kwarg3', "'None'")]
-
-        """
-        args = []
-        for arg in red.arguments:
-            if isinstance(arg, (redbaron.ListArgumentNode, redbaron.DictArgumentNode)):
-                args.append((arg.dumps(), None))
-                continue
-            target = arg.target.value
-            if arg.value:
-                value = arg.value.dumps()
-            else:
-                value = None
-            args.append((target, value))
-        return args
-
-    @red_src()
-    @red_type(["def"])
-    def add_arg(self, red, index, arg):
-        """Add a argument at the given index
-
-        .. table::
-
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | Yes            | def           | Yes              |
-            +--------------+----------------+---------------+------------------+
-
-        :param red: the red baron source
-        :type red: :class:`redbaron.RedBaron`
-        :param index: position of the argument. ``0`` would mean to put the argument in the front.
-        :type index: :class:`int`
-        :param arg: the argument to add
-        :type arg: :class:`str`
-        :returns: the transformed source code
-        :rtype: :class:`redbaron.RedBaron`
-
-        Example:
-
-        .. doctest::
-
-            >>> import reddel_server
-            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
-            >>> src = \"\"\"def foo(arg1, arg2, kwarg2=1):
-            ...     arg2 = arg2 or ""
-            ...     return arg2 + func(arg1, "arg2 arg2") + kwarg2
-            ... \"\"\"
-            >>> print(p.add_arg(src, 3, "kwarg3=123"))
-            def foo(arg1, arg2, kwarg2=1, kwarg3=123):
-                arg2 = arg2 or ""
-                return arg2 + func(arg1, "arg2 arg2") + kwarg2
-            <BLANKLINE>
-
-        """
-        red.arguments.insert(index, arg)
-        return red
-
-    @red_src(dump=False)
-    def get_parents(self, red, row, column):
-        """Return a list of parents (scopes) relative to the given position
-
-        .. table::
-
-            +--------------+----------------+---------------+------------------+
-            | source input | outputs source | allowed types | only single node |
-            +==============+================+===============+==================+
-            | Yes          | No             | Any           | No               |
-            +--------------+----------------+---------------+------------------+
-
-        :param red: the red baron source
-        :type red: :class:`redbaron.RedBaron`
-        :param row: line number of the position to query (starting with 1)
-        :type row: :class:`int`
-        :param column: column number (starting with 1)
-        :type column: :class:`int`
-        :returns: a list of parents starting with the element at position first.
-        :rtype: :class:`list` of the parents.
-                A parent is represented by a :class:`tuple` of the
-                type, top-left, bottom-right position.
-                Each position is a :class:`tuple` of two :class:`int` for
-                row and column number.
-
-        .. doctest::
-
-            >>> import reddel_server
-            >>> import pprint
-            >>> p = reddel_server.RedBaronProvider(reddel_server.Server())
-            >>> src = \"\"\"def foo(arg1):
-            ...     arg2 = arg2 or ""
-            ...     if Ture:
-            ...         try:
-            ...             pass
-            ...         except:
-            ...             func(subfunc(arg1="asdf"))
-            ... \"\"\"
-            >>> pprint.pprint(p.get_parents(src, 7, 32))
-            [('string', (7, 31), (7, 36)),
-             ('call_argument', (7, 26), (7, 36)),
-             ('call', (7, 25), (7, 37)),
-             ('call_argument', (7, 18), (7, 37)),
-             ('call', (7, 17), (7, 38)),
-             ('atomtrailers', (7, 13), (7, 38)),
-             ('except', (6, 9), (8, 0)),
-             ('try', (4, 9), (8, 0)),
-             ('ifelseblock', (3, 5), (8, 0)),
-             ('def', (1, 1), (8, 0))]
-
-        """
-        parents = []
-        current = red.find_by_position((row, column))
-        while current != red:
-            region = current.absolute_bounding_box
-            nodetype = current.type
-            tl = region.top_left.to_tuple()
-            br = region.bottom_right.to_tuple()
-            current = current.parent
-            # if previous bounding box is the same take the parent higher in the hierachy
-            if parents and parents[-1][1] == tl and parents[-1][2] == br:
-                parents.pop()
-            parents.append((nodetype, tl, br))
-        return parents
+    return getattr(providermod, providerclsname)

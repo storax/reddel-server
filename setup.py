@@ -24,7 +24,7 @@ def read(*names, **kwargs):
 
 setup(
     name='reddel-server',
-    version='0.1.0',
+    version='0.2.0',
     license='BSD',
     description='Python EPC server for reddel.',
     long_description='%s\n%s' % (

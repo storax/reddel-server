@@ -1,5 +1,15 @@
 """
 Module that contains the command line app.
+
+The app has the following structure:
+:func:`main` is the main entry point. Logging is initialized first.
+Then the server is created and the port is printed so that the epc client can connect to it.
+Afterwards the logging level is set to the user specified level. If we use debug logging when the
+server starts, connecting with the client will fail.
+
+After the server has been created, the providers are loaded and combined
+with a :class:`reddel_server.ChainedProvider`.
+Afterwards the server starts serving.
 """
 from __future__ import absolute_import
 
@@ -10,18 +20,19 @@ import click
 import click_log
 
 import reddel_server
-from . import utils
+from . import provider
 
-logger = logging.getLogger("reddel")
+logger = logging.getLogger(__name__)
 
 
+# If you change any arguments, make sure to update the readme documentation.
 @click.command()
 @click.option('--address', type=str, default='localhost', help="address to bind the server to")
 @click.option('--port', type=int, default=0, help="address to bind the server to")
 @click.option('--provider', '-p', type=str, multiple=True, help="dotted path to a provider class")
 @click_log.simple_verbosity_option()
 @click.option('--debug', is_flag=True, help="Show tracebacks when erroring.")
-@click_log.init("reddel")
+@click_log.init("reddel_server")
 def main(address, port, provider, debug):
     # Silence the loggers before we print the port
     # We wouldn't be able to connect from emacs via epc otherwise
@@ -63,7 +74,7 @@ def load_providers(providers, server, debug=False):
     loaded = []
     for p in providers:
         try:
-            providercls = utils.get_attr_from_dotted_path(p)
+            providercls = provider.get_attr_from_dotted_path(p)
         except (ImportError, ValueError, AttributeError) as err:
             msg = "Unable to load provider %s. Provider will not be loaded. %s"
             if debug:
@@ -77,6 +88,16 @@ def load_providers(providers, server, debug=False):
 
 @contextlib.contextmanager
 def logging_level(loggers, level):
+    """Set the level of the given loggers to the given level
+
+    This will restore the logging level afterwards and is useful
+    for temporarly chaning the logging level.
+
+    :param loggers: a list of loggers
+    :type loggers: :class:`list`
+    :param level: the logging level to set
+    :type level: :class:`str` | :class:`int`
+    """
     levels = {logger: logger.level for logger in loggers}
     for logger in loggers:
         logger.setLevel(level)

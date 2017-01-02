@@ -9,7 +9,7 @@ import six
 
 __all__ = ['Server']
 
-logger = logging.getLogger('reddel')
+logger = logging.getLogger(__name__)
 
 
 class Server(epc.server.EPCServer):
@@ -31,7 +31,7 @@ class Server(epc.server.EPCServer):
         :param server_address: URL/IP and port
         :type server_address: tuple
         :param RequestHandlerClass: the handler class to use
-        :type RequestHandlerClass: :class:`epc.handler.EPCHandler`
+        :type RequestHandlerClass: :class:`epc.server.EPCHandler`
         :raises: None
         """
         epc.server.EPCServer.__init__(self, server_address, RequestHandlerClass=RequestHandlerClass, log_traceback=True)

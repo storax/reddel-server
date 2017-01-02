@@ -79,8 +79,10 @@ An example on how to expose a simple function to add arguments::
 
   class MyProvider(reddel_server.ProviderBase)
       @reddel_server.red_src()
-      @reddel_server.red_type(["def"])
-      def add_arg(self, red, index, arg):
+      @reddel_server.red_validate([reddel_server.OptionalRegionValidator(),
+                                   reddel_server.SingleNodeValidator(),
+                                   reddel_server.TypeValidator(["def"])])
+      def add_arg(self, red, start, end, index, arg):
           red.arguments.insert(index, arg)
           return red
 
@@ -93,7 +95,7 @@ Start the reddel server from Emacs::
   >>> ;; make sure myprovidermod is in a directory within the PYTHONPATH
   >>> (epc:call-sync my-epc 'add_provider '("myprovidermod.MyProvider"))
 
-  >>> (message (epc:call-sync my-epc 'add_arg '("def foo(arg1, arg3): pass" 1 "arg2")))
+  >>> (message (epc:call-sync my-epc 'add_arg '("def foo(arg1, arg3): pass" nil nil 1 "arg2")))
   "def foo(arg1, arg2, arg3): pass"
 
 Redbaron provides a lossless format, so even formatting and comments are preserved.

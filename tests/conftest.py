@@ -3,6 +3,13 @@ import pytest
 import reddel_server
 
 
+@pytest.fixture(scope="module")
+def server():
+    server = reddel_server.Server(('localhost', 0))
+    yield server
+    server.server_close()
+
+
 @pytest.fixture(scope='function')
 def fooprovider(server):
     class FooProvider(reddel_server.ProviderBase):
